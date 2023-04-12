@@ -1,0 +1,12 @@
+__pycache__
+.DS_Store
+.ipynb_checkpoints
+*.ipynb
+*.pyc
+poetry.lock
+poetry.toml
+.python-version
+.idea
+.venv
+docs/build
+docs/jupyter_execute

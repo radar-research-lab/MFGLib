@@ -1,0 +1,32 @@
+name: on-pull-request
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - uses: snok/install-poetry@v1
+        with:
+          version: "1.4.2"
+      - name: Install package
+        run: poetry install
+      - name: Lint (black)
+        run: poetry run black . --check
+      - name: Lint (isort)
+        run: poetry run isort . --check
+      - name: Lint (ruff)
+        run: poetry run ruff mfglib tests
+      - name: Lint (mypy 3.8)
+        run: poetry run mypy --python-version 3.8
+      - name: Lint (mypy 3.10)
+        run: poetry run mypy --python-version 3.10
+      - name: Test (pytest)
+        run: poetry run pytest
+      - name: Docs (sphinx)
+        run: poetry run sphinx-build -EW docs/source docs/build
