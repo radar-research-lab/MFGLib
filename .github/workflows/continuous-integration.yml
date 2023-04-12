@@ -3,9 +3,13 @@ on: [pull_request]
 jobs:
   check:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.8", "3.9", "3.10"]
+    defaults:
+      run:
+        shell: bash
     runs-on: ${{ matrix.os }}
     concurrency:
       group: $${{ matrix.os }}-${{ matrix.python-version }}-${{ github.ref }}
@@ -17,9 +21,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: snok/install-poetry@v1
         with:
-          version: "1.4.2"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Poetry version
+        run: poetry --version
       - name: Install package
         run: poetry install
+      - name: Activate venv
+        run: source $VENV
       - name: Lint (black)
         run: poetry run black . --check
       - name: Lint (isort)
