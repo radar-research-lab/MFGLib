@@ -17,7 +17,7 @@ If you wish to cite `MFGLib`, please use the following:
 ```
 @misc{mfglib_code,
     author       = {XXX},
-    title        = {{MFGLib}: A Library for Mean Field GameS, version 0.1.0},
+    title        = {{MFGLib}: A Library for Mean Field Games, version 0.1.0},
     howpublished = {\url{https://github.com/radar-research-lab/MFGLib}},
     year         = {2023}
 }
