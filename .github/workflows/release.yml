@@ -21,4 +21,4 @@ jobs:
       - run: |
           poetry --version
           poetry config pypi-token.pypi ${{ secrets.pypi_token }}
-          poetry publish --build --dry-run
+          poetry publish --build
