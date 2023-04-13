@@ -1,0 +1,21 @@
+name: build-documentation
+on:
+  pull_request:
+    paths:
+      - mfglib
+      - tests
+      - docs
+      - pyproject.toml
+      - .github/workflows/build-documentation.yml
+jobs:
+  build-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - uses: snok/install-poetry@v1
+      - run: |
+          poetry install --with docs
+          poetry run sphinx-build -EW docs/source docs/build

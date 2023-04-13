@@ -1,7 +1,14 @@
-name: on-pull-request
-on: [pull_request]
+name: lint-and-test
+on:
+  pull_request:
+    paths:
+      - mfglib
+      - tests
+      - docs/source/*.py
+      - pyproject.toml
+      - .github/workflows/lint-and-test.yml
 jobs:
-  check:
+  lint-and-test:
     strategy:
       fail-fast: false
       matrix:
@@ -39,14 +46,3 @@ jobs:
         run: poetry run mypy
       - name: Test (pytest)
         run: poetry run pytest
-  verify-documentation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - uses: snok/install-poetry@v1
-      - run: |
-          poetry install --with docs
-          poetry run sphinx-build -EW docs/source docs/build
