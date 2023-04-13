@@ -8,6 +8,7 @@ build:
     post_create_environment:
       - pip install -U pip setuptools
       - pip install poetry
+      - poetry config virtualenvs.create false
     post_install:
       - poetry install --with docs --without dev
 
