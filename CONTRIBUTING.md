@@ -18,7 +18,8 @@ All of the above checks are run in the CI.
 
 ## Documentation
 
-To build and serve the documentation locally, run
+By default, `$ poetry install` will not install the necessary documentation dependenices. If you wish to build and 
+serve the documentation locally, first run `$ poetry install --with docs` to and then
 
 ```shell
 $ sphinx-autobuild docs/source docs/build
