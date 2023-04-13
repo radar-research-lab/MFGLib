@@ -5,20 +5,15 @@ on:
       - v*.*.*
 jobs:
   publish:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12"]
     defaults:
       run:
         shell: bash
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.11
       - uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
