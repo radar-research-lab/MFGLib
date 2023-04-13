@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mfglib"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Library for Mean-Field Games"
 authors = [
     "Xin Guo <xinguo@berkeley.edu>",
@@ -10,6 +10,8 @@ authors = [
     "Junzi Zhang <saslascroyale@gmail.com>",
 ]
 readme = "README.md"
+license = "MIT"
+documentation = "https://mfglib.readthedocs.io/en/latest/"
 
 [tool.poetry.dependencies]
 python = "^3.8"
