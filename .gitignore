@@ -10,3 +10,4 @@ poetry.toml
 .venv
 docs/build
 docs/jupyter_execute
+.coverage
