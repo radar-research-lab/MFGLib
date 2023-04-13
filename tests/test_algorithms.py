@@ -100,7 +100,7 @@ def test_tuner_on_rps(algorithm: Algorithm) -> None:
         atol=0,
         rtol=1e-1,
         metric="shifted_geo_mean",
-        n_trials=5,
+        n_trials=6,
         timeout=10,
     )
     assert isinstance(alg_tune, Algorithm)

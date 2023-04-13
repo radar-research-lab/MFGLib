@@ -2,30 +2,41 @@ name: on-pull-request
 on: [pull_request]
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10"]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
     concurrency:
-      group: ${{ github.ref }}
+      group: $${{ matrix.os }}-${{ matrix.python-version }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: ${{ matrix.python-version }}
       - uses: snok/install-poetry@v1
         with:
-          version: "1.4.2"
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Poetry version
+        run: poetry --version
       - name: Install package
         run: poetry install
+      - name: Activate venv
+        run: source $VENV
       - name: Lint (black)
         run: poetry run black . --check
       - name: Lint (isort)
         run: poetry run isort . --check
       - name: Lint (ruff)
         run: poetry run ruff mfglib tests
-      - name: Lint (mypy 3.8)
-        run: poetry run mypy --python-version 3.8
-      - name: Lint (mypy 3.10)
-        run: poetry run mypy --python-version 3.10
+      - name: Lint (mypy)
+        run: poetry run mypy
       - name: Test (pytest)
         run: poetry run pytest
       - name: Docs (sphinx)
