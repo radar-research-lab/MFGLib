@@ -4,9 +4,10 @@ version = "0.1.0"
 description = "A Library for Mean-Field Games"
 authors = [
     "Xin Guo <xinguo@berkeley.edu>",
+    "Anran Hu <anranhu0107@gmail.com>",
     "Matteo Santamaria <matteosantamaria@berkely.edu>",
     "Mahan Tajrobehkar <mahan_tajrobehkar@berkeley.edu>",  
-    "Junzi Zhang <junziz@stanford.edu>",
+    "Junzi Zhang <saslascroyale@gmail.com>",
 ]
 readme = "README.md"
 
