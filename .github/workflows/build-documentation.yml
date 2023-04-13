@@ -2,9 +2,9 @@ name: build-documentation
 on:
   pull_request:
     paths:
-      - mfglib
-      - tests
-      - docs
+      - mfglib/**
+      - tests/**
+      - docs/**
       - pyproject.toml
       - .github/workflows/build-documentation.yml
 jobs:
