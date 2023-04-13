@@ -39,5 +39,14 @@ jobs:
         run: poetry run mypy
       - name: Test (pytest)
         run: poetry run pytest
-      - name: Docs (sphinx)
-        run: poetry run sphinx-build -EW docs/source docs/build
+  verify-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - uses: snok/install-poetry@v1
+      - run: |
+          poetry install --with docs
+          poetry run sphinx-build -EW docs/source docs/build
