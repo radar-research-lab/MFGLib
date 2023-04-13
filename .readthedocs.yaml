@@ -6,9 +6,10 @@ build:
     python: "3.10"
   jobs:
     post_create_environment:
-      - curl -sSL https://install.python-poetry.org | python3 -
+      - pip install -U pip setuptools
+      - pip install poetry
     post_install:
-      - poetry install --with docs
+      - poetry install --with docs --without dev
 
 sphinx:
   configuration: docs/source/conf.py
