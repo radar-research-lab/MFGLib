@@ -39,6 +39,34 @@ MFGLib supports all major platforms and can be installed with `pip`:
 $ pip install mfglib
 ```
 
+For developers who would like to contribute to this library, please refer to [CONTRIBUTING.md](https://github.com/radar-research-lab/MFGLib/blob/main/CONTRIBUTING.md) for the installation steps using `poetry` that allows developers to test their changes in real time.
+
+## Usage
+Here is an example that shows how to use MFGLib to define an environment called [rock paper scissors](https://mfglib.readthedocs.io/en/latest/environments.html), and solve it using [MF-OMO](https://mfglib.readthedocs.io/en/latest/algorithms.html) with default hyperparameters and tolerances, and plot the exploitability scores over iterations. 
+
+```python
+from mfglib.env import Environment
+from mfglib.alg import MFOMO
+from mfglib.metrics import exploitability_score
+import matplotlib.pyplot as plt
+
+# Environment
+rock_paper_scissors_instance = Environment.rock_paper_scissors()
+
+# Run the MF-OMO algorithm with default hyperparameters and default tolerances and plot exploitability scores
+solns, expls, runtimes = MFOMO().solve(rock_paper_scissors_instance, max_iter=300, verbose=True)
+
+plt.semilogy(runtimes, exploitability_score(rock_paper_scissors_instance, solns)) 
+plt.grid(True)
+plt.xlabel("Runtime (seconds)")
+plt.ylabel("Exploitability")
+plt.title("Rock Paper Scissors Environment - MFOMO Algorithm")
+plt.show()
+```
+<img src="https://github.com/radar-research-lab/MFGLib/blob/main/images/mwe.png" alt= “” width=800 height=600>
+
+Please refer to the [documentation](https://mfglib.readthedocs.io/en/latest/) for more info on how to use the library. 
+
 ## Citing
 If you wish to cite `MFGLib`, please use the following:
 ```
