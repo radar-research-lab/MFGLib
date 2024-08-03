@@ -44,7 +44,7 @@ def osqp_proj(d, b, A):
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format='csc')], format='csc')
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False)
+    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
     res = prob.solve()
 
     return torch.tensor(res.x)

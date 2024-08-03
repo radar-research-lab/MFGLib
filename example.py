@@ -4,13 +4,13 @@ from mfglib.metrics import exploitability_score
 import matplotlib.pyplot as plt
 
 # Environment
-rock_paper_scissors_instance = Environment.rock_paper_scissors()
+env_instance = Environment.beach_bar()
 
-solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-3, eta=1e-5).solve(rock_paper_scissors_instance, max_iter=300, verbose=True)
+solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-2, eta=1e-3).solve(env_instance, max_iter=300, verbose=True)
 
 # TODO: Add optuna test
 
-plt.semilogy(runtimes, exploitability_score(rock_paper_scissors_instance, solns)) 
+plt.semilogy(runtimes, exploitability_score(env_instance, solns)) 
 plt.grid(True)
 plt.xlabel("Runtime (seconds)")
 plt.ylabel("Exploitability")
