@@ -19,6 +19,7 @@ python = "^3.8"
 optuna = "^3.1.0"
 osqp = "^0.6.3"
 numpy = ">=1.18.5,<1.26.0"
+matplotlib = "^3.7.0" # seems that 3.9.1 installs numpy 1.26 which has many issues like MKL warning and incompatible with scipy and osqp
 
 [tool.poetry.group.dev.dependencies]
 isort = "5.12.0"

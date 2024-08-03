@@ -7,6 +7,7 @@ import optuna
 import torch
 import osqp
 from scipy import sparse
+import numpy as np
 
 from mfglib.alg.abc import Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
@@ -20,6 +21,33 @@ from mfglib.alg.utils import (
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.metrics import exploitability_score
+
+### TODO: Change to support warm start and update vectors to be more efficient https://osqp.org/docs/interfaces/python.html#python-interface
+def osqp_proj(d, b, A):
+    # project d onto Ad=b, d>=0
+
+    # Problem dimensions
+    n = d.size(0) 
+    m = A.size(0)
+
+    # Define the P matrix (2 * I)
+    P = sparse.eye(n, format='csc')
+
+    # Define the q vector (-2 * a)
+    q = -2 * d.numpy()
+
+    # Define the constraints l and u
+    l = np.concatenate([b.numpy(), np.zeros(n)])
+    u = np.concatenate([b.numpy(), np.inf * np.ones(n)])
+
+    # Define the constraint matrix
+    A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format='csc')], format='csc')
+
+    prob = osqp.OSQP()
+    prob.setup(P, q, A_constraint, l, u, verbose=False)
+    res = prob.solve()
+
+    return torch.tensor(res.x)
 
 
 class OccupationMeasureInclusion(Algorithm):
@@ -50,34 +78,6 @@ class OccupationMeasureInclusion(Algorithm):
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
         return f"OccupationMeasureInclusion(alpha={self.alpha, self.eta})"
-
-    ### TODO: Change to support warm start and update vectors to be more efficient https://osqp.org/docs/interfaces/python.html#python-interface
-    def osqp_proj(d, b, A):
-        # project d onto Ad=b, d>=0
-
-        # Problem dimensions
-        n = d.size(0) 
-        m = A.size(0)
-
-        # Define the P matrix (2 * I)
-        P = sparse.eye(n, format='csc')
-
-        # Define the q vector (-2 * a)
-        q = -2 * d.numpy()
-
-        # Define the constraints l and u
-        l = np.concatenate([b.numpy(), np.zeros(n)])
-        u = np.concatenate([b.numpy(), np.inf * np.ones(n)])
-
-        # Define the constraint matrix
-        A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format='csc')], format='csc')
-
-        prob = osqp.OSQP()
-        prob.setup(P, q, A_constraint, l, u, verbose=True)
-        res = prob.solve()
-
-        return torch.tensor(res.x)
-
 
     def solve(
         self,
@@ -149,6 +149,7 @@ class OccupationMeasureInclusion(Algorithm):
 
         # initialize d = L^pi
         d = mean_field(env_instance, pi)
+        d_shape = list(d.shape) # non-flattened shape of d
 
         t = time.time()
         for n in range(1, max_iter + 1):
@@ -156,8 +157,8 @@ class OccupationMeasureInclusion(Algorithm):
             b, A_d, c_d = mf_omo_params(env_instance, d)
 
             # Update d and pi
-            d -= self.alpha * (c_d + self.eta * d)
-            d = osqp_proj(d, b, A_d)
+            d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+            d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
             
             pi = cast(
                 torch.Tensor,
