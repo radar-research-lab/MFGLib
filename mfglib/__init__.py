@@ -1,11 +1,8 @@
+from importlib.metadata import version
 import warnings
-from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("mfglib")
-except PackageNotFoundError:
-    warnings.warn(
-        "mfglib is not installed as a package, you are importing it as "
-        "a local module. __version__ is set to None."
-    )
-    __version__ = None  # type: ignore[assignment]
+except:
+    warnings.warn("mfglib is not pre-installed; probably using some local checkout of mfglib; default __version__ to 0.1.1 but please check the mfglib you indeed import by print(mfglib) after import mfglib.")
+    __version__ = "0.1.1"
