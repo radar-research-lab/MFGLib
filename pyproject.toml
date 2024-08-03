@@ -15,8 +15,10 @@ documentation = "https://mfglib.readthedocs.io/en/latest/"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-torch = "^2.0.0"
+# torch = "^2.0.0"
 optuna = "^3.1.0"
+osqp = "^0.6.3"
+numpy = ">=1.18.5,<1.26.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "5.12.0"
