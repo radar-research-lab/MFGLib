@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # Environment
 env_instance = Environment.beach_bar()
 
-solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-2, eta=1e-3).solve(env_instance, max_iter=300, verbose=True)
+solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-3, eta=1e-2).solve(env_instance, max_iter=10000, verbose=True)
 
 # TODO: Add optuna test
 

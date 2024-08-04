@@ -31,6 +31,7 @@ class RewardFn:
         l_s = len(env.S)
         mu_t = L_t.flatten(start_dim=l_s).sum(-1)
 
-        c3 = -torch.log(mu_t.repeat(L_t.shape[1], 1).T + self.log_eps)
+        c3 = -torch.log(mu_t.repeat(L_t.shape[1], 1).T + self.log_eps) #- 10 * L_t
 
         return self.c1 + self.c2 + c3
+

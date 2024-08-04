@@ -17,6 +17,7 @@ from mfglib.alg.utils import (
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
+    project_onto_simplex,
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
@@ -31,7 +32,7 @@ def osqp_proj(d, b, A):
     m = A.size(0)
 
     # Define the P matrix (2 * I)
-    P = sparse.eye(n, format='csc')
+    P = 2 * sparse.eye(n, format='csc')
 
     # Define the q vector (-2 * a)
     q = -2 * d.numpy()
@@ -47,7 +48,20 @@ def osqp_proj(d, b, A):
     prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
     res = prob.solve()
 
-    return torch.tensor(res.x)
+    sol = torch.tensor(res.x).float() # numpy default is double which is fine; but to get matmul(A, sol) work needs both to be same type
+    ### DEBUG
+    # print(np.sum(np.maximum(-sol.numpy(), 0)), np.sum(sol.numpy()) - 1, np.sum(np.abs((torch.matmul(A,sol) - b).numpy())), sol.shape, A.shape, b.shape)
+    # sol_numpy_reshaped = sol.numpy().reshape(3, 4, 3)
+    # print(np.sum(sol_numpy_reshaped, axis=(1,2)))
+    # print(A, b)
+
+    ### project onto >= 0
+    # sol = torch.tensor(np.maximum(res.x, 0))
+
+    ### this one is definitely wrong as should project to simplex for each timestep
+    # sol = project_onto_simplex(torch.tensor(res.x))
+
+    return sol
 
 
 class OccupationMeasureInclusion(Algorithm):
