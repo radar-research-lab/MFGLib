@@ -8,6 +8,7 @@ import torch
 import osqp
 from scipy import sparse
 import numpy as np
+import copy
 
 # torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -175,7 +176,11 @@ class OccupationMeasureInclusion(Algorithm):
             # print(n, "before update", np.sum(np.abs(d.numpy())))
 
             # Update d and pi
+            d_old = copy.deepcopy(d.numpy())
+            
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+
+            print(f"iter: {n}, residual: {np.sum(np.abs(d.numpy()-d_old))}")
 
             # print(n, "after update", np.sum(np.abs(d.numpy())))
 

@@ -9,8 +9,19 @@ import matplotlib.pyplot as plt
 # Environment
 # env_instance = Environment.beach_bar(log_eps=1000, T=1, n=3)
 env_instance = Environment.beach_bar(log_eps=10) # log_eps=1 or less OSQP obj decreases when convergel log_eps=10 or above OSQP obj increases when converge
+# env_instance = Environment.beach_bar(T=10, n=10)
 
-solns, expls, runtimes = OccupationMeasureInclusion(alpha=5e-2, eta=0).solve(env_instance, max_iter=10000, verbose=True, atol=1e-8, rtol=1e-8)
+# env_instance = Environment.rock_paper_scissors()
+# env_instance = Environment.equilibrium_price()
+# env_instance = Environment.linear_quadratic()
+# env_instance = Environment.random_linear()
+# env_instance = Environment.susceptible_infected()
+# env_instance = Environment.crowd_motion()
+# env_instance = Environment.left_right()
+# env_instance = Environment.conservative_treasure_hunting
+# env_instance = Environment.building_evacuation()
+
+solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-4, eta=1e-4).solve(env_instance, max_iter=1000, verbose=True, atol=1e-8, rtol=1e-8)
 # solns, expls, runtimes = OnlineMirrorDescent(alpha=0.01).solve(env_instance, max_iter=1000, verbose=True, atol=1e-5, rtol=1e-5)
 
 # TODO: Add optuna test
