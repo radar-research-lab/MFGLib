@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # env_instance = Environment.beach_bar(log_eps=1000, T=1, n=3)
 env_instance = Environment.beach_bar(log_eps=10) # log_eps=1 or less OSQP obj decreases when convergel log_eps=10 or above OSQP obj increases when converge
 
-solns, expls, runtimes = OccupationMeasureInclusion(alpha=1, eta=1e-3).solve(env_instance, max_iter=10, verbose=True, atol=1e-8, rtol=1e-8)
+solns, expls, runtimes = OccupationMeasureInclusion(alpha=5e-2, eta=0).solve(env_instance, max_iter=10000, verbose=True, atol=1e-8, rtol=1e-8)
 # solns, expls, runtimes = OnlineMirrorDescent(alpha=0.01).solve(env_instance, max_iter=1000, verbose=True, atol=1e-5, rtol=1e-5)
 
 # TODO: Add optuna test

@@ -34,4 +34,4 @@ class RewardFn:
         c3 = -torch.log(mu_t.repeat(L_t.shape[1], 1).T + self.log_eps) #- 1000 * L_t
 
         return self.c1 + self.c2 + c3
-        # return -0.01*L_t
+        return -L_t
