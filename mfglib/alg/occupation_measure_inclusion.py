@@ -45,7 +45,7 @@ def osqp_proj(d, b, A):
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format='csc')], format='csc')
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
+    prob.setup(P, q, A_constraint, l, u, verbose=True, eps_abs=1e-8, eps_rel=1e-8)
     res = prob.solve()
 
     sol = torch.tensor(res.x).float() # numpy default is double which is fine; but to get matmul(A, sol) work needs both to be same type
@@ -170,9 +170,16 @@ class OccupationMeasureInclusion(Algorithm):
             # obtain occupation-measure params
             b, A_d, c_d = mf_omo_params(env_instance, d)
 
+            print(n, "before update", np.sum(np.abs(d.numpy())))
+
             # Update d and pi
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+
+            print(n, "after update", np.sum(np.abs(d.numpy())))
+
             d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+
+            # print(d)
             
             pi = cast(
                 torch.Tensor,
