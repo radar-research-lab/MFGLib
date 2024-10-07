@@ -58,6 +58,7 @@ class Algorithm(abc.ABC):
         self,
         *,
         env_suite: list[Environment],
+        pi: Literal["uniform"] | torch.Tensor, 
         max_iter: int,
         atol: float,
         rtol: float,
@@ -72,7 +73,7 @@ class Algorithm(abc.ABC):
             solver = self._tuner_instance(trial)
             for env_instance in env_suite:
                 solutions, _, _ = solver.solve(
-                    env_instance, max_iter=max_iter, atol=atol, rtol=rtol
+                    env_instance, pi=pi, max_iter=max_iter, atol=atol, rtol=rtol
                 )
                 stats.append(len(solutions) - 1)
 

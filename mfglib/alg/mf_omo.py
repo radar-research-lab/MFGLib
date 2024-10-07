@@ -441,6 +441,7 @@ class MFOMO(Algorithm):
         self,
         env_suite: list[Environment],
         *,
+        pi: torch.Tensor | None = None,
         max_iter: int = 100,
         atol: float = 1e-3,
         rtol: float = 1e-3,
@@ -454,6 +455,8 @@ class MFOMO(Algorithm):
         ----
         env_suite
             A list of environment instances.
+        pi:
+            The initial policy for tuning. TODO: allow multiple initial policies to be tuned together.
         max_iter
             The number of iterations to run the algorithm on each environment
             instance.
@@ -474,6 +477,7 @@ class MFOMO(Algorithm):
         """
         params = self._optimize_optuna_study(
             env_suite=env_suite,
+            pi=pi if pi is not None else "uniform",
             max_iter=max_iter,
             atol=atol,
             rtol=rtol,
