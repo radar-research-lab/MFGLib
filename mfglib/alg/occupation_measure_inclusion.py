@@ -159,6 +159,7 @@ class OccupationMeasureInclusion(Algorithm):
                 runtime_n=runtimes[0],
             )
 
+
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
             if verbose:
                 _print_solve_complete(seconds_elapsed=runtimes[0])
@@ -180,7 +181,7 @@ class OccupationMeasureInclusion(Algorithm):
             
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
 
-            print(f"iter: {n}, residual: {np.sum(np.abs(d.numpy()-d_old))}")
+            # print(f"iter: {n}, residual: {np.sum(np.abs(d.numpy()-d_old))}")
 
             # print(n, "after update", np.sum(np.abs(d.numpy())))
 
@@ -221,8 +222,8 @@ class OccupationMeasureInclusion(Algorithm):
     @classmethod
     def _tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
         return OccupationMeasureInclusion(
-            alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True),
-            eta=trial.suggest_float("eta", 0, 100, log=True),
+            alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
+            eta=trial.suggest_float("eta", 1e-8, 10, log=True),
         )
 
     def tune(

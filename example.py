@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 
 # Environment
 # env_instance = Environment.beach_bar(log_eps=1000, T=1, n=3)
-env_instance = Environment.beach_bar(log_eps=10) # log_eps=1 or less OSQP obj decreases when convergel log_eps=10 or above OSQP obj increases when converge
+# env_instance = Environment.beach_bar(log_eps=10) # log_eps=1 or less OSQP obj decreases when convergel log_eps=10 or above OSQP obj increases when converge
 # env_instance = Environment.beach_bar(T=10, n=10)
+
+env_instance = Environment.beach_bar(n=2,bar_loc=1,log_eps=1000)
 
 # env_instance = Environment.rock_paper_scissors()
 # env_instance = Environment.equilibrium_price()
@@ -21,7 +23,18 @@ env_instance = Environment.beach_bar(log_eps=10) # log_eps=1 or less OSQP obj de
 # env_instance = Environment.conservative_treasure_hunting
 # env_instance = Environment.building_evacuation()
 
-solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-4, eta=1e-4).solve(env_instance, max_iter=1000, verbose=True, atol=1e-8, rtol=1e-8)
+atol = None
+rtol = 1e-1
+max_iter = 1000
+timeout = 300
+n_trials = 100
+
+omi = OccupationMeasureInclusion()
+omi_tuned = omi.tune([env_instance], atol=atol, rtol=rtol, max_iter=max_iter, timeout=timeout, n_trials=n_trials,)
+
+solns, expls, runtimes = omi_tuned.solve(env_instance, max_iter=max_iter, verbose=True, atol=atol, rtol=rtol)
+
+# solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-4, eta=1e-4).solve(env_instance, max_iter=1000, verbose=True, atol=1e-8, rtol=1e-8)
 # solns, expls, runtimes = OnlineMirrorDescent(alpha=0.01).solve(env_instance, max_iter=1000, verbose=True, atol=1e-5, rtol=1e-5)
 
 # TODO: Add optuna test
