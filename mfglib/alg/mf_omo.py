@@ -411,7 +411,7 @@ class MFOMO(Algorithm):
         return solutions, scores, runtimes
 
     @classmethod
-    def _tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
+    def _tuner_instance(cls, trial: optuna.Trial, hat_init_only=False) -> MFOMO:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
         rb_freq_num = trial.suggest_int("rb_freq_num", 1, 201, step=10)
         rb_freq = None if rb_freq_bool else rb_freq_num
@@ -434,7 +434,7 @@ class MFOMO(Algorithm):
             m3=trial.suggest_float("m3", 0.01, 1.0, step=0.09),
             optimizer=optimizer,
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
-            hat_init=trial.suggest_categorical("hat_init", [False, True]),
+            hat_init=trial.suggest_categorical("hat_init", [False, True]) if not hat_init_only else trial.suggest_categorical("hat_init", [True]),
         )
 
     def tune(
@@ -446,8 +446,13 @@ class MFOMO(Algorithm):
         atol: float = 1e-3,
         rtol: float = 1e-3,
         metric: Literal["shifted_geo_mean", "failure_rate"] = "shifted_geo_mean",
+        stat: Literal["iterations", "runtime", "exploitability"] = "iterations",
+        fail_thresh: int | float | None = None, 
+        shift: float | None = 10, 
         n_trials: int | None = 10,
         timeout: float = 30.0,
+        drop_on_failure: bool = True,
+        tuner_instance_kwargs: dict[str, Any] = None, 
     ) -> MFOMO:
         """Tune the algorithm over a given environment suite.
 
@@ -482,8 +487,13 @@ class MFOMO(Algorithm):
             atol=atol,
             rtol=rtol,
             metric=metric,
+            stat=stat,
+            fail_thresh=fail_thresh,
+            shift=shift,
             n_trials=n_trials,
             timeout=timeout,
+            drop_on_failure=drop_on_failure,
+            tuner_instance_kwargs=tuner_instance_kwargs,
         )
         if params:
             self.loss = params["loss"]

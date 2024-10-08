@@ -6,6 +6,7 @@ from typing import Any, Literal, TypeVar
 
 import optuna
 import torch
+import numpy as np
 
 from mfglib.alg.utils import failure_rate, shifted_geometric_mean
 from mfglib.env import Environment
@@ -63,31 +64,60 @@ class Algorithm(abc.ABC):
         atol: float,
         rtol: float,
         metric: Literal["shifted_geo_mean", "failure_rate"],
+        stat: Literal["iterations", "runtime", "exploitability"] = "iterations",
+        fail_thresh: int | float | None = None, # only used for metric="failure_rate"
+        shift: float | None = 10, # only used for metric="shifted_geo_mean"
         n_trials: int | None,
         timeout: float,
+        drop_on_failure: bool = True,
+        tuner_instance_kwargs: dict[str, Any] = None,
     ) -> dict[str, Any] | None:
         """Optimize optuna study object."""
 
-        def objective(trial: optuna.Trial) -> float:
+        def objective(trial: optuna.Trial) -> float: 
+            # consider passing variables explicitly; 
+            # otherwise can lead to weird errors if assign/overwrite the variables inside which could lead to variables referenced before assignment errors
             stats = []
-            solver = self._tuner_instance(trial)
+            if tuner_instance_kwargs is not None:
+                solver = self._tuner_instance(trial, **tuner_instance_kwargs)
+            else:
+                solver = self._tuner_instance(trial)
             for env_instance in env_suite:
-                solutions, _, _ = solver.solve(
+                solutions, expls, runtimes = solver.solve(
                     env_instance, pi=pi, max_iter=max_iter, atol=atol, rtol=rtol
                 )
-                stats.append(len(solutions) - 1)
+                if stat == "iterations":
+                    stats.append(len(solutions) - 1)
+                elif stat == "runtime":
+                    stats.append(runtimes[-1])
+                elif stat == "exploitability":
+                    stats.append(np.min(expls))
+                else:
+                    raise ValueError(f"unexpected {stat=}")
 
             if metric == "failure_rate":
-                return failure_rate(stats, fail_thresh=max_iter)
+                # we avoid assign fail_thresh values which would make it local variable and hence variable referenced before assignemnt error
+                if fail_thresh is None: 
+                    if stat == "iterations":
+                        fail_thresh_ = max_iter
+                        print(f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=} and {metric=}")
+                    elif stat == "exploitability":
+                        fail_thresh_ = atol + rtol * expls[0]
+                        print(f"fail_thresh not specified; adopt fail_thresh = atol + rtol * expls[0] = {fail_thresh_} for {stat=} and {metric=}")
+                    else:
+                        raise ValueError(f"need to specify fail_thresh for {stat=} and {metric=}")
+                return failure_rate(stats, fail_thresh=fail_thresh_)
             elif metric == "shifted_geo_mean":
-                return shifted_geometric_mean(stats, shift=10)
+                # we avoid assign shift values which would make it local variable and hence variable referenced before assignemnt error
+                shift_ = 10 if shift is None else shift
+                return shifted_geometric_mean(stats, shift=shift_)
             else:
-                raise ValueError(f"unexpected metric={metric}")
+                raise ValueError(f"unexpected {metric=}")
 
-        study = optuna.create_study(sampler=optuna.samplers.TPESampler(seed=0))
+        study = optuna.create_study(sampler=optuna.samplers.TPESampler(seed=0)) # TODO: shall we consider any other sampler/optimizer for optuna?
         study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
-        fail_thresh = max_iter if metric == "shifted_geo_mean" else 1
+        fail_thresh = fail_thresh if metric == "shifted_geo_mean" else 1
 
         if study.best_trial.value and study.best_trial.value >= fail_thresh:
             warnings.warn(
@@ -95,6 +125,9 @@ class Algorithm(abc.ABC):
                 "exploitability threshold within the specified number of "
                 "iterations in any of the instances in the environment suite. "
             )
-            return None
+            if drop_on_failure:
+                return None
+            else:
+                return study.best_trial.params
         else:
             return study.best_trial.params
