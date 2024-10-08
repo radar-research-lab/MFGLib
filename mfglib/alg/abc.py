@@ -59,20 +59,33 @@ class Algorithm(abc.ABC):
         self,
         *,
         env_suite: list[Environment],
-        pi: Literal["uniform"] | torch.Tensor, 
+        pi: Literal["uniform"] | torch.Tensor = "uniform", 
         max_iter: int,
         atol: float,
         rtol: float,
         metric: Literal["shifted_geo_mean", "failure_rate"],
         stat: Literal["iterations", "runtime", "exploitability"] = "iterations",
-        fail_thresh: int | float | None = None, # only used for metric="failure_rate"
-        shift: float | None = 10, # only used for metric="shifted_geo_mean"
+        fail_thresh: int | float | None = None, # used for metric="failure_rate" and final checking/warning
+        shift: float | None = None, # only used for metric="shifted_geo_mean"
         n_trials: int | None,
         timeout: float,
         drop_on_failure: bool = True,
         tuner_instance_kwargs: dict[str, Any] = None,
     ) -> dict[str, Any] | None:
         """Optimize optuna study object."""
+
+        # set fail_thresh and shift values
+        if fail_thresh is None: 
+            if stat == "iterations":
+                fail_thresh = max_iter
+                print(f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=}")
+            elif stat == "exploitability":
+                fail_thresh = atol + rtol * expls[0]
+                print(f"fail_thresh not specified; adopt fail_thresh = atol + rtol * expls[0] = {fail_thresh} for {stat=}")
+            else:
+                raise ValueError(f"need to specify fail_thresh for {stat=}")
+
+        shift = 10 if shift is None else shift
 
         def objective(trial: optuna.Trial) -> float: 
             # consider passing variables explicitly; 
@@ -96,30 +109,18 @@ class Algorithm(abc.ABC):
                     raise ValueError(f"unexpected {stat=}")
 
             if metric == "failure_rate":
-                # we avoid assign fail_thresh values which would make it local variable and hence variable referenced before assignemnt error
-                if fail_thresh is None: 
-                    if stat == "iterations":
-                        fail_thresh_ = max_iter
-                        print(f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=} and {metric=}")
-                    elif stat == "exploitability":
-                        fail_thresh_ = atol + rtol * expls[0]
-                        print(f"fail_thresh not specified; adopt fail_thresh = atol + rtol * expls[0] = {fail_thresh_} for {stat=} and {metric=}")
-                    else:
-                        raise ValueError(f"need to specify fail_thresh for {stat=} and {metric=}")
-                return failure_rate(stats, fail_thresh=fail_thresh_)
+                return failure_rate(stats, fail_thresh=fail_thresh)
             elif metric == "shifted_geo_mean":
-                # we avoid assign shift values which would make it local variable and hence variable referenced before assignemnt error
-                shift_ = 10 if shift is None else shift
-                return shifted_geometric_mean(stats, shift=shift_)
+                return shifted_geometric_mean(stats, shift=shift)
             else:
                 raise ValueError(f"unexpected {metric=}")
 
         study = optuna.create_study(sampler=optuna.samplers.TPESampler(seed=0)) # TODO: shall we consider any other sampler/optimizer for optuna?
         study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
-        fail_thresh = fail_thresh if metric == "shifted_geo_mean" else 1
+        fail_thresh_final = fail_thresh if metric == "shifted_geo_mean" else 1
 
-        if study.best_trial.value and study.best_trial.value >= fail_thresh:
+        if study.best_trial.value and study.best_trial.value >= fail_thresh_final:
             warnings.warn(
                 "None of the algorithm trials reached the given "
                 "exploitability threshold within the specified number of "
