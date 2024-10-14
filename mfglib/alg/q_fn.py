@@ -4,6 +4,8 @@ from typing import Callable, cast
 
 import torch
 
+from mfglib import __TORCH_FLOAT__
+
 from mfglib.env import Environment
 
 
@@ -115,6 +117,6 @@ class QFn:
                 .sum(dim=-1)
                 .flatten()
             )
-            return self._transition_probabilities(t) @ pi_q.float()
+            return self._transition_probabilities(t) @ (pi_q.double() if __TORCH_FLOAT__ == 64 else pi_q.float())
 
         return self._compute_q_values(future_rewards)

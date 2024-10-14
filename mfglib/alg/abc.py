@@ -80,8 +80,8 @@ class Algorithm(abc.ABC):
                 fail_thresh = max_iter
                 print(f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=}")
             elif stat == "exploitability":
-                fail_thresh = atol + rtol * expls[0]
-                print(f"fail_thresh not specified; adopt fail_thresh = atol + rtol * expls[0] = {fail_thresh} for {stat=}")
+                fail_thresh = atol if atol is not None else 1e-3
+                print(f"fail_thresh not specified; adopt fail_thresh = atol (rtol ignored) = {fail_thresh} for {stat=}")
             else:
                 raise ValueError(f"need to specify fail_thresh for {stat=}")
 

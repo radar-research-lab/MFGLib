@@ -4,6 +4,8 @@ from typing import Literal
 
 import torch
 
+from mfglib import __TORCH_FLOAT__
+
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
@@ -69,19 +71,21 @@ def mf_omo_obj(
     y = c_w * torch.sin(y_w) if parameterize else y_w
     b, A_L, c_L = mf_omo_params(env_instance, L)
 
+    # print(f"{y.dtype=}, {z.dtype=}, {L.dtype=}")
+
     # Compute the objective
-    obj = torch.zeros(1, dtype=torch.float)
+    obj = torch.zeros(1, dtype=torch.float64 if __TORCH_FLOAT__ == 64 else torch.float)
     if loss == "l1":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).abs().sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).abs().sum()
+        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).abs().sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).abs().sum()
         obj += c3 * z.mul(L.flatten()).sum()
     if loss == "l2":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).pow(2).sum()
+        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
         obj += c3 * z.mul(L.flatten()).sum().pow(2)
     if loss == "l1_l2":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).pow(2).sum()
+        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
         obj += c3 * z.mul(L.flatten()).sum()
 
     return obj
