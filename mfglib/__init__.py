@@ -1,8 +1,8 @@
 from importlib.metadata import version
 import warnings
 
-# __TORCH_FLOAT__ = 64
-__TORCH_FLOAT__ = 32
+__TORCH_FLOAT__ = 64
+# __TORCH_FLOAT__ = 32
 
 try:
     __version__ = version("mfglib")
