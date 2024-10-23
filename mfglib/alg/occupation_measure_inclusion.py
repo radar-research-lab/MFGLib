@@ -14,6 +14,7 @@ import copy
 
 from mfglib.alg.abc import Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
+from mfglib.alg.mf_omo_policy_given_mean_field import mf_omo_policy # TODO: consider renaming this as it's used for both OMI and OMO
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _print_fancy_header,
@@ -189,12 +190,13 @@ class OccupationMeasureInclusion(Algorithm):
 
             # print(d)
             
-            pi = cast(
-                torch.Tensor,
-                soft_max(d.flatten(start_dim=1 + l_s)).reshape((T + 1,) + S + A),
-            )
+            # pi = cast(
+            #     torch.Tensor,
+            #     soft_max(d.flatten(start_dim=1 + l_s)).reshape((T + 1,) + S + A),
+            # ) # previous bug --> btw why did I cast a tensor to tensor?
+            pi = mf_omo_policy(env_instance, d.clone().detach())
 
-            solutions.append(pi.clone().detach())
+            solutions.append(pi.clone().detach()) # do we need to clone + detach again? no? same for MF-OMO？
             scores.append(exploitability_score(env_instance, pi))
             if scores[n] < scores[argmin]:
                 argmin = n
@@ -223,7 +225,7 @@ class OccupationMeasureInclusion(Algorithm):
     def _tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
         return OccupationMeasureInclusion(
             alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
-            eta=trial.suggest_float("eta", 1e-8, 10, log=True),
+            # eta=trial.suggest_float("eta", 1e-8, 10, log=True),
         )
 
     def tune(
@@ -272,5 +274,5 @@ class OccupationMeasureInclusion(Algorithm):
         )
         if params:
             self.alpha = params["alpha"]
-            self.eta = params["eta"]
+            # self.eta = params["eta"]
         return self
