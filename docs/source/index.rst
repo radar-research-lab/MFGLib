@@ -20,7 +20,7 @@ A Library for Mean-Field Games
 Installation
 ------------
 
-MFGLib provides pre-built wheels for Python 3.8+ and can be installed via ``pip`` on
+MFGLib provides pre-built wheels for Python 3.9+ and can be installed via ``pip`` on
 all major platforms:
 
 .. code-block::
