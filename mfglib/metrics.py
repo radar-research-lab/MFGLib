@@ -12,15 +12,13 @@ __all__ = ["exploitability_score"]
 
 
 @overload
-def exploitability_score(env_instance: Environment, pi: torch.Tensor) -> float:
-    ...
+def exploitability_score(env_instance: Environment, pi: torch.Tensor) -> float: ...
 
 
 @overload
 def exploitability_score(
     env_instance: Environment, pi: list[torch.Tensor]
-) -> list[float]:
-    ...
+) -> list[float]: ...
 
 
 def exploitability_score(

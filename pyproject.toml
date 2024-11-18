@@ -14,13 +14,13 @@ license = "MIT"
 documentation = "https://mfglib.readthedocs.io/en/latest/"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 torch = "^2.0.0"
 optuna = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
-isort = "5.12.0"
-black = "23.3.0"
+isort = "5.13.2"
+black = "24.10.0"
 mypy = "1.13.0"
 ruff = "0.0.261"
 pytest = "7.3.0"

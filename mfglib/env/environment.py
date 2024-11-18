@@ -10,13 +10,11 @@ import torch
 # `__call__`. In particular, this allows a user to pass either a function or a class
 # for the reward and transition functions.
 class RewardFn(Protocol):
-    def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
-        ...
+    def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor: ...
 
 
 class TransitionFn(Protocol):
-    def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
-        ...
+    def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor: ...
 
 
 class Environment:
