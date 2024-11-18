@@ -23,7 +23,7 @@ isort = "5.13.2"
 black = "24.10.0"
 mypy = "1.13.0"
 ruff = "0.0.261"
-pytest = "7.3.0"
+pytest = "8.3.3"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs]
