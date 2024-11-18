@@ -16,13 +16,14 @@ documentation = "https://mfglib.readthedocs.io/en/latest/"
 [tool.poetry.dependencies]
 python = "^3.9"
 torch = "^2.0.0"
+numpy = "~1"
 optuna = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "5.13.2"
 black = "24.10.0"
 mypy = "1.13.0"
-ruff = "0.0.261"
+ruff = "0.7.4"
 pytest = "8.3.3"
 coveralls = "3.3.1"
 
@@ -40,13 +41,13 @@ jupyter_sphinx = "0.4.0"
 [tool.isort]
 profile = "black"
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["D"]
 ignore = ["D100", "D101", "D102", "D104"]
 # We don't enforce docstrings in test functions
 per-file-ignores = {"tests/test_*.py" = ["D103"]}
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [tool.mypy]

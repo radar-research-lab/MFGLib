@@ -14,7 +14,9 @@ jobs:
         shell: bash
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -28,7 +30,7 @@ jobs:
           source $VENV
           black . --check
           isort . --check
-          ruff mfglib tests
+          ruff check mfglib tests
   test:
     strategy:
       fail-fast: false
@@ -43,7 +45,9 @@ jobs:
       group: ${{ matrix.os }}-${{ matrix.python-version }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
