@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import cast
 
 import torch
 
@@ -38,7 +39,7 @@ class TransitionFn:
                         + (self.k * (m_t - s + self.el) + a - self.m) * self.delta
                         + self.sigma * epsilon * math.sqrt(self.delta)
                     )
-                    s_next = torch.round(s_next_tensor).int().item()
+                    s_next = cast(int, torch.round(s_next_tensor).int().item())
                     s_next = min(max(-self.el, s_next), self.el)
                     p_t[s_next + self.el, s, a] += epsilon_pr
 
