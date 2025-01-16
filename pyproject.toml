@@ -20,6 +20,7 @@ numpy = "~1"
 optuna = "^3.1.0"
 osqp = "^0.6.3"
 matplotlib = "^3.7.0"
+scipy = "~1"
 
 [tool.poetry.group.dev.dependencies]
 isort = "5.13.2"
@@ -56,6 +57,10 @@ convention = "numpy"
 files = ["mfglib", "tests"]
 show_error_codes = true
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["osqp", "scipy"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

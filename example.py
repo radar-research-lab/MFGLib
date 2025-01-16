@@ -1,7 +1,8 @@
-from mfglib.env import Environment
-from mfglib.alg import OccupationMeasureInclusion, OnlineMirrorDescent
-from mfglib.metrics import exploitability_score
 import matplotlib.pyplot as plt
+
+from mfglib.alg import OccupationMeasureInclusion, OnlineMirrorDescent
+from mfglib.env import Environment
+from mfglib.metrics import exploitability_score
 
 ### Interesting observations to debug: OSQP seems to converge with larger obj than init when log_eps is large (10 or above?) and/or alpha is large (like 1000, 10000, etc.)
 ### T, n, etc. parameters seem to not matter much
@@ -30,7 +31,9 @@ import matplotlib.pyplot as plt
 # env_instance = Environment.crowd_motion() # this one MF-OMI needs alpha=0.0001 or so to converge and OMD is faster
 # env_instance = Environment.left_right() # both MF-OMI and OMD works well as is (after tuning)
 # env_instance = Environment.conservative_treasure_hunting() # after tuning both MF-OMI and OMD can converge in 1-2 steps
-env_instance = Environment.building_evacuation() # with alpha=0.0003 or 0.0001 MF-OMI converges slowly but well; OMD (even with tuning) start to blow up after approaching 1e-3 somehow
+env_instance = (
+    Environment.building_evacuation()
+)  # with alpha=0.0003 or 0.0001 MF-OMI converges slowly but well; OMD (even with tuning) start to blow up after approaching 1e-3 somehow
 
 atol = None
 
@@ -55,11 +58,15 @@ timeout = 300
 n_trials = 10
 
 
-omi = OccupationMeasureInclusion(alpha=0.0003) # alpha=10 # alpha=0.0004 # alpha=0.0001 # alpha=0.0003
+omi = OccupationMeasureInclusion(
+    alpha=0.0003
+)  # alpha=10 # alpha=0.0004 # alpha=0.0001 # alpha=0.0003
 # omi_tuned = omi.tune([env_instance], atol=atol, rtol=rtol, max_iter=max_iter, timeout=timeout, n_trials=n_trials,)
 omi_tuned = omi
 
-solns, expls, runtimes = omi_tuned.solve(env_instance, max_iter=max_iter, verbose=True, atol=atol, rtol=rtol)
+solns, expls, runtimes = omi_tuned.solve(
+    env_instance, max_iter=max_iter, verbose=True, atol=atol, rtol=rtol
+)
 
 # solns, expls, runtimes = OccupationMeasureInclusion(alpha=1e-4, eta=1e-4).solve(env_instance, max_iter=1000, verbose=True, atol=1e-8, rtol=1e-8)
 # solns, expls, runtimes = OnlineMirrorDescent(alpha=0.01).solve(env_instance, max_iter=1000, verbose=True, atol=1e-5, rtol=1e-5)
@@ -68,12 +75,21 @@ solns, expls, runtimes = omi_tuned.solve(env_instance, max_iter=max_iter, verbos
 
 ### OMD
 omd = OnlineMirrorDescent()
-omd_tuned = omd.tune([env_instance], atol=atol, rtol=rtol, max_iter=max_iter, timeout=timeout, n_trials=n_trials,)
+omd_tuned = omd.tune(
+    [env_instance],
+    atol=atol,
+    rtol=rtol,
+    max_iter=max_iter,
+    timeout=timeout,
+    n_trials=n_trials,
+)
 # omd_tuned = omd
 
-solns_omd, expls_omd, runtimes_omd = omd_tuned.solve(env_instance, max_iter=max_iter, verbose=True, atol=atol, rtol=rtol)
+solns_omd, expls_omd, runtimes_omd = omd_tuned.solve(
+    env_instance, max_iter=max_iter, verbose=True, atol=atol, rtol=rtol
+)
 
-# plt.semilogy(runtimes, exploitability_score(env_instance, solns), label="mfomi") 
+# plt.semilogy(runtimes, exploitability_score(env_instance, solns), label="mfomi")
 # plt.semilogy(runtimes_omd, exploitability_score(env_instance, solns_omd), label="omd")
 # plt.grid(True)
 # plt.xlabel("Runtime (seconds)")
@@ -81,7 +97,7 @@ solns_omd, expls_omd, runtimes_omd = omd_tuned.solve(env_instance, max_iter=max_
 # # plt.title("Rock Paper Scissors Environment - MFOMO Algorithm")
 # plt.show()
 
-plt.semilogy(exploitability_score(env_instance, solns), label="mfomi") 
+plt.semilogy(exploitability_score(env_instance, solns), label="mfomi")
 plt.semilogy(exploitability_score(env_instance, solns_omd), label="omd")
 plt.grid(True)
 plt.xlabel("Iterations")
