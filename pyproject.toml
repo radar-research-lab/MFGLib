@@ -14,42 +14,42 @@ license = "MIT"
 documentation = "https://mfglib.readthedocs.io/en/latest/"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-# torch = "^2.0.0"
+python = "^3.9"
+torch = "^2.0.0"
+numpy = "~1"
 optuna = "^3.1.0"
 osqp = "^0.6.3"
-numpy = ">=1.18.5,<1.26.0"
-matplotlib = "^3.7.0" # seems that 3.9.1 installs numpy 1.26 which has many issues like MKL warning and incompatible with scipy and osqp
+matplotlib = "^3.7.0"
 
 [tool.poetry.group.dev.dependencies]
-isort = "5.12.0"
-black = "23.3.0"
-mypy = "1.2.0"
-ruff = "0.0.261"
-pytest = "7.3.0"
+isort = "5.13.2"
+black = "24.10.0"
+mypy = "1.13.0"
+ruff = "0.7.4"
+pytest = "8.3.3"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "6.1.3"
+sphinx = "7.4.7"
 sphinx-autobuild = "2021.3.14"
 sphinxcontrib-bibtex = "2.5.0"
 setuptools = "*"  # <-- required for sphinxcontrib-bibtex
 matplotlib = "3.7.1"
-jupyter_sphinx = "0.4.0"
+jupyter_sphinx = "0.5.3"
 
 [tool.isort]
 profile = "black"
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["D"]
 ignore = ["D100", "D101", "D102", "D104"]
 # We don't enforce docstrings in test functions
 per-file-ignores = {"tests/test_*.py" = ["D103"]}
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [tool.mypy]
