@@ -1,42 +1,43 @@
 from __future__ import annotations
 
-import time
-from typing import Literal, cast
-
-import optuna
-import torch
-import osqp
-from scipy import sparse
-import numpy as np
 import copy
+import time
+from typing import Literal
 
-# torch.set_default_tensor_type(torch.DoubleTensor)
+import numpy as np
+import optuna
+import osqp
+import torch
+from scipy import sparse
 
 from mfglib.alg.abc import Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
-from mfglib.alg.mf_omo_policy_given_mean_field import mf_omo_policy # TODO: consider renaming this as it's used for both OMI and OMO
+from mfglib.alg.mf_omo_policy_given_mean_field import (  # TODO: consider renaming this as it's used for both OMI and OMO
+    mf_omo_policy,
+)
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _print_fancy_header,
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
-    project_onto_simplex,
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.metrics import exploitability_score
 
-### TODO: Change to support warm start and update vectors to be more efficient https://osqp.org/docs/interfaces/python.html#python-interface
-def osqp_proj(d, b, A):
-    # project d onto Ad=b, d>=0
+# torch.set_default_tensor_type(torch.DoubleTensor)
 
+
+### TODO: Change to support warm start and update vectors to be more efficient https://osqp.org/docs/interfaces/python.html#python-interface
+def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
+    """Project d onto Ad=b, d>=0."""
     # Problem dimensions
-    n = d.size(0) 
+    n = d.size(0)
     m = A.size(0)
 
     # Define the P matrix (2 * I)
-    P = 2 * sparse.eye(n, format='csc')
+    P = 2 * sparse.eye(n, format="csc")
 
     # Define the q vector (-2 * a)
     q = -2 * d.numpy()
@@ -46,13 +47,15 @@ def osqp_proj(d, b, A):
     u = np.concatenate([b.numpy(), np.inf * np.ones(n)])
 
     # Define the constraint matrix
-    A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format='csc')], format='csc')
+    A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
 
     prob = osqp.OSQP()
     prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
     res = prob.solve()
 
-    sol = torch.tensor(res.x).float() # numpy default is double which is fine; but to get matmul(A, sol) work needs both to be same type
+    sol = torch.tensor(
+        res.x
+    ).float()  # numpy default is double which is fine; but to get matmul(A, sol) work needs both to be same type
     ### DEBUG
     # print(np.sum(np.maximum(-sol.numpy(), 0)), np.sum(sol.numpy()) - 1, np.sum(np.abs((torch.matmul(A,sol) - b).numpy())), sol.shape, A.shape, b.shape)
     # sol_numpy_reshaped = sol.numpy().reshape(3, 4, 3)
@@ -75,8 +78,8 @@ class OccupationMeasureInclusion(Algorithm):
     -----
     See [#mfoml]_ for algorithm details.
 
-    .. [#mfoml] Hu, Anran and Zhang, Junzi "MF-OML: Online Mean-Field Reinforcement Learning 
-        with Occupation Measures for Large Population Games." 
+    .. [#mfoml] Hu, Anran and Zhang, Junzi "MF-OML: Online Mean-Field Reinforcement Learning
+        with Occupation Measures for Large Population Games."
         arXiv preprint arxiv:2405.00282 (2024). https://arxiv.org/abs/2405.00282
     """
 
@@ -160,7 +163,6 @@ class OccupationMeasureInclusion(Algorithm):
                 runtime_n=runtimes[0],
             )
 
-
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
             if verbose:
                 _print_solve_complete(seconds_elapsed=runtimes[0])
@@ -168,7 +170,7 @@ class OccupationMeasureInclusion(Algorithm):
 
         # initialize d = L^pi
         d = mean_field(env_instance, pi)
-        d_shape = list(d.shape) # non-flattened shape of d
+        d_shape = list(d.shape)  # non-flattened shape of d
 
         t = time.time()
         for n in range(1, max_iter + 1):
@@ -179,7 +181,7 @@ class OccupationMeasureInclusion(Algorithm):
 
             # Update d and pi
             d_old = copy.deepcopy(d.numpy())
-            
+
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
 
             # print(f"iter: {n}, residual: {np.sum(np.abs(d.numpy()-d_old))}")
@@ -189,14 +191,16 @@ class OccupationMeasureInclusion(Algorithm):
             d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
 
             # print(d)
-            
+
             # pi = cast(
             #     torch.Tensor,
             #     soft_max(d.flatten(start_dim=1 + l_s)).reshape((T + 1,) + S + A),
             # ) # previous bug --> btw why did I cast a tensor to tensor?
             pi = mf_omo_policy(env_instance, d.clone().detach())
 
-            solutions.append(pi.clone().detach()) # do we need to clone + detach again? no? same for MF-OMO？
+            solutions.append(
+                pi.clone().detach()
+            )  # do we need to clone + detach again? no? same for MF-OMO？
             scores.append(exploitability_score(env_instance, pi))
             if scores[n] < scores[argmin]:
                 argmin = n
@@ -222,57 +226,7 @@ class OccupationMeasureInclusion(Algorithm):
         return solutions, scores, runtimes
 
     @classmethod
-    def _tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
+    def _init_tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
         return OccupationMeasureInclusion(
             alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
-            # eta=trial.suggest_float("eta", 1e-8, 10, log=True),
         )
-
-    def tune(
-        self,
-        env_suite: list[Environment],
-        *,
-        max_iter: int = 100,
-        atol: float = 1e-3,
-        rtol: float = 1e-3,
-        metric: Literal["shifted_geo_mean", "failure_rate"] = "shifted_geo_mean",
-        n_trials: int | None = 10,
-        timeout: float = 30.0,
-    ) -> OccupationMeasureInclusion:
-        """Tune the algorithm over a given environment suite.
-
-        Args
-        ----
-        env_suite
-            A list of environment instances.
-        max_iter
-            The number of iterations to run the algorithm on each environment
-            instance.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        metric
-            Determines which metric to be used for scoring a trial. Either
-            ``shifted_geo_mean`` or ``failure_rate``.
-        n_trials
-            The number of trials. If this argument is not given, as many
-            trials are run as possible.
-        timeout
-            Stop tuning after the given number of second(s) on each
-            environment instance. If this argument is not given, as many trials are
-            run as possible.
-        """
-        params = self._optimize_optuna_study(
-            env_suite=env_suite,
-            max_iter=max_iter,
-            atol=atol,
-            rtol=rtol,
-            metric=metric,
-            n_trials=n_trials,
-            timeout=timeout,
-        )
-        if params:
-            self.alpha = params["alpha"]
-            # self.eta = params["eta"]
-        return self
