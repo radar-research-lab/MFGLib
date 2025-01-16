@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Literal, Sequence, TypeVar, cast
 
 import torch
 
@@ -199,7 +199,7 @@ def hat_initialization(
     return v_hat, w_hat
 
 
-def shifted_geometric_mean(array: list[int], shift: float = 10.0) -> float:
+def shifted_geometric_mean(array: Sequence[int | float], shift: float = 10.0) -> float:
     """Compute shifted geometric mean of the elements in an array."""
     return cast(
         float,
@@ -208,7 +208,7 @@ def shifted_geometric_mean(array: list[int], shift: float = 10.0) -> float:
     )
 
 
-def failure_rate(array: list[int], fail_thresh: float) -> float:
+def failure_rate(array: Sequence[int | float], fail_thresh: float) -> float:
     """Compute the failure rate.
 
     Failure rate is the portion of the elements in the array that are bigger

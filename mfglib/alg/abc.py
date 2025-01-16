@@ -4,9 +4,9 @@ import abc
 import warnings
 from typing import Any, Literal, TypeVar
 
+import numpy as np
 import optuna
 import torch
-import numpy as np
 
 from mfglib.alg.utils import failure_rate, shifted_geometric_mean
 from mfglib.env import Environment
@@ -59,38 +59,43 @@ class Algorithm(abc.ABC):
         self,
         *,
         env_suite: list[Environment],
-        pi: Literal["uniform"] | torch.Tensor = "uniform", 
+        pi: Literal["uniform"] | torch.Tensor = "uniform",
         max_iter: int,
         atol: float,
         rtol: float,
         metric: Literal["shifted_geo_mean", "failure_rate"],
         stat: Literal["iterations", "runtime", "exploitability"] = "iterations",
-        fail_thresh: int | float | None = None, # used for metric="failure_rate" and final checking/warning
-        shift: float | None = None, # only used for metric="shifted_geo_mean"
+        fail_thresh: (
+            int | float | None
+        ) = None,  # used for metric="failure_rate" and final checking/warning
+        shift: float | None = None,  # only used for metric="shifted_geo_mean"
         n_trials: int | None,
         timeout: float,
         drop_on_failure: bool = True,
-        tuner_instance_kwargs: dict[str, Any] = None,
+        tuner_instance_kwargs: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Optimize optuna study object."""
-
         # set fail_thresh and shift values
-        if fail_thresh is None: 
+        if fail_thresh is None:
             if stat == "iterations":
                 fail_thresh = max_iter
-                print(f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=}")
+                print(
+                    f"fail_thresh not specified; adopt fail_thresh = {max_iter=} for {stat=}"
+                )
             elif stat == "exploitability":
                 fail_thresh = atol if atol is not None else 1e-3
-                print(f"fail_thresh not specified; adopt fail_thresh = atol (rtol ignored) = {fail_thresh} for {stat=}")
+                print(
+                    f"fail_thresh not specified; adopt fail_thresh = atol (rtol ignored) = {fail_thresh} for {stat=}"
+                )
             else:
                 raise ValueError(f"need to specify fail_thresh for {stat=}")
 
         shift = 10 if shift is None else shift
 
-        def objective(trial: optuna.Trial) -> float: 
-            # consider passing variables explicitly; 
+        def objective(trial: optuna.Trial) -> float:
+            # consider passing variables explicitly;
             # otherwise can lead to weird errors if assign/overwrite the variables inside which could lead to variables referenced before assignment errors
-            stats = []
+            stats: list[int | float] = []
             if tuner_instance_kwargs is not None:
                 solver = self._tuner_instance(trial, **tuner_instance_kwargs)
             else:
@@ -115,7 +120,9 @@ class Algorithm(abc.ABC):
             else:
                 raise ValueError(f"unexpected {metric=}")
 
-        study = optuna.create_study(sampler=optuna.samplers.TPESampler(seed=0)) # TODO: shall we consider any other sampler/optimizer for optuna?
+        study = optuna.create_study(
+            sampler=optuna.samplers.TPESampler(seed=0)
+        )  # TODO: shall we consider any other sampler/optimizer for optuna?
         study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
         fail_thresh_final = fail_thresh if metric == "shifted_geo_mean" else 1

@@ -5,7 +5,6 @@ from typing import Literal
 import torch
 
 from mfglib import __TORCH_FLOAT__
-
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
@@ -76,16 +75,85 @@ def mf_omo_obj(
     # Compute the objective
     obj = torch.zeros(1, dtype=torch.float64 if __TORCH_FLOAT__ == 64 else torch.float)
     if loss == "l1":
-        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).abs().sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).abs().sum()
+        obj += (
+            c1
+            * (
+                A_L.matmul(
+                    L.flatten().double()
+                    if __TORCH_FLOAT__ == 64
+                    else L.flatten().float()
+                )
+                - b
+            )
+            .abs()
+            .sum()
+        )
+        obj += (
+            c2
+            * (
+                A_L.transpose(0, 1).matmul(
+                    y.double() if __TORCH_FLOAT__ == 64 else y.float()
+                )
+                + z
+                - c_L
+            )
+            .abs()
+            .sum()
+        )
         obj += c3 * z.mul(L.flatten()).sum()
     if loss == "l2":
-        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
+        obj += (
+            c1
+            * (
+                A_L.matmul(
+                    L.flatten().double()
+                    if __TORCH_FLOAT__ == 64
+                    else L.flatten().float()
+                )
+                - b
+            )
+            .pow(2)
+            .sum()
+        )
+        obj += (
+            c2
+            * (
+                A_L.transpose(0, 1).matmul(
+                    y.double() if __TORCH_FLOAT__ == 64 else y.float()
+                )
+                + z
+                - c_L
+            )
+            .pow(2)
+            .sum()
+        )
         obj += c3 * z.mul(L.flatten()).sum().pow(2)
     if loss == "l1_l2":
-        obj += c1 * (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
+        obj += (
+            c1
+            * (
+                A_L.matmul(
+                    L.flatten().double()
+                    if __TORCH_FLOAT__ == 64
+                    else L.flatten().float()
+                )
+                - b
+            )
+            .pow(2)
+            .sum()
+        )
+        obj += (
+            c2
+            * (
+                A_L.transpose(0, 1).matmul(
+                    y.double() if __TORCH_FLOAT__ == 64 else y.float()
+                )
+                + z
+                - c_L
+            )
+            .pow(2)
+            .sum()
+        )
         obj += c3 * z.mul(L.flatten()).sum()
 
     return obj
