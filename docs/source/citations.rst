@@ -12,6 +12,5 @@ the following BibTeX entry:
         journal = {arXiv preprint arXiv:2304.08630},
         year    = {2023}
     }
+
 If you find MFGLib to be helpful and would like to send virtual kudos, please consider leaving a star on the `GitHub repository <https://github.com/radar-research-lab/MFGLib>`_.
-
-

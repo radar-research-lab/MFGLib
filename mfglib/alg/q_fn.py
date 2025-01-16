@@ -93,7 +93,7 @@ class QFn:
         def future_rewards(t: int, q_values: torch.Tensor) -> torch.Tensor:
             l_s = len(self.env.S)
             max_q = q_values[t + 1].flatten(start_dim=l_s).max(dim=-1)[0].flatten()
-            return cast(torch.Tensor, self._transition_probabilities(t) @ max_q)
+            return self._transition_probabilities(t) @ max_q
 
         return self._compute_q_values(future_rewards)
 

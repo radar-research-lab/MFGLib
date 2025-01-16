@@ -7,8 +7,10 @@ jobs:
   upload-coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - uses: snok/install-poetry@v1
