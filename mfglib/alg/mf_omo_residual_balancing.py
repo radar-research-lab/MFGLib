@@ -4,8 +4,6 @@ from typing import Literal
 
 import torch
 
-from mfglib import __TORCH_FLOAT__
-
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
@@ -72,16 +70,16 @@ def mf_omo_residual_balancing(
     b, A_L, c_L = mf_omo_params(env_instance, L)
 
     if loss == "l1":
-        o1 = (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).abs().sum()
-        o2 = (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).abs().sum()
+        o1 = (A_L.matmul(L.flatten()) - b).abs().sum()
+        o2 = (A_L.transpose(0, 1).matmul(y) + z - c_L).abs().sum()
         o3 = z.mul(L.flatten()).sum()
     if loss == "l2":
-        o1 = (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
-        o2 = (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
+        o1 = (A_L.matmul(L.flatten()) - b).pow(2).sum()
+        o2 = (A_L.transpose(0, 1).matmul(y) + z - c_L).pow(2).sum()
         o3 = z.mul(L.flatten()).sum().pow(2)
     if loss == "l1_l2":
-        o1 = (A_L.matmul(L.flatten().double() if __TORCH_FLOAT__ == 64 else L.flatten().float()) - b).pow(2).sum()
-        o2 = (A_L.transpose(0, 1).matmul(y.double() if __TORCH_FLOAT__ == 64 else y.float()) + z - c_L).pow(2).sum()
+        o1 = (A_L.matmul(L.flatten()) - b).pow(2).sum()
+        o2 = (A_L.transpose(0, 1).matmul(y) + z - c_L).pow(2).sum()
         o3 = z.mul(L.flatten()).sum()
 
     # Apply residual balancing

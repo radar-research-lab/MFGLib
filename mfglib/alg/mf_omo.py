@@ -411,7 +411,7 @@ class MFOMO(Algorithm):
         return solutions, scores, runtimes
 
     @classmethod
-    def _tuner_instance(cls, trial: optuna.Trial, hat_init_only=False) -> MFOMO:
+    def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
         rb_freq_num = trial.suggest_int("rb_freq_num", 1, 201, step=10)
         rb_freq = None if rb_freq_bool else rb_freq_num
@@ -434,81 +434,5 @@ class MFOMO(Algorithm):
             m3=trial.suggest_float("m3", 0.01, 1.0, step=0.09),
             optimizer=optimizer,
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
-            hat_init=trial.suggest_categorical("hat_init", [False, True]) if not hat_init_only else trial.suggest_categorical("hat_init", [True]),
+            hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
-
-    def tune(
-        self,
-        env_suite: list[Environment],
-        *,
-        pi: torch.Tensor | None = None,
-        max_iter: int = 100,
-        atol: float = 1e-3,
-        rtol: float = 1e-3,
-        metric: Literal["shifted_geo_mean", "failure_rate"] = "shifted_geo_mean",
-        stat: Literal["iterations", "runtime", "exploitability"] = "iterations",
-        fail_thresh: int | float | None = None, 
-        shift: float | None = 10, 
-        n_trials: int | None = 10,
-        timeout: float = 30.0,
-        drop_on_failure: bool = True,
-        tuner_instance_kwargs: dict[str, Any] = None, 
-    ) -> MFOMO:
-        """Tune the algorithm over a given environment suite.
-
-        Args
-        ----
-        env_suite
-            A list of environment instances.
-        pi:
-            The initial policy for tuning. TODO: allow multiple initial policies to be tuned together.
-        max_iter
-            The number of iterations to run the algorithm on each environment
-            instance.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        metric
-            Determines which metric to be used for scoring a trial. Either
-            ``shifted_geo_mean`` or ``failure_rate``.
-        n_trials
-            The number of trials. If this argument is not given, as many
-            trials are run as possible.
-        timeout
-            Stop tuning after the given number of second(s) on each
-            environment instance. If this argument is not given, as many trials are
-            run as possible.
-        """
-        params = self._optimize_optuna_study(
-            env_suite=env_suite,
-            pi=pi if pi is not None else "uniform",
-            max_iter=max_iter,
-            atol=atol,
-            rtol=rtol,
-            metric=metric,
-            stat=stat,
-            fail_thresh=fail_thresh,
-            shift=shift,
-            n_trials=n_trials,
-            timeout=timeout,
-            drop_on_failure=drop_on_failure,
-            tuner_instance_kwargs=tuner_instance_kwargs,
-        )
-        if params:
-            self.loss = params["loss"]
-            self.c1 = params["c1"]
-            self.c2 = params["c2"]
-            self.rb_freq = None if params["rb_freq_bool"] else params["rb_freq_num"]
-            self.m1 = params["m1"]
-            self.m2 = params["m2"]
-            self.m3 = params["m3"]
-            self.optimizer = {
-                "name": params["name"],
-                "config": {
-                    "lr": params["lr"],
-                },
-            }
-            self.parameterize = params["parameterize"]
-            self.hat_init = params["hat_init"]
-        return self

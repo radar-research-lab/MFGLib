@@ -83,7 +83,7 @@ def test_mf_omo_on_lr(
 
 
 @pytest.mark.parametrize(
-    "algorithm",
+    "alg",
     [
         FictitiousPlay(),
         MFOMO(),
@@ -91,16 +91,27 @@ def test_mf_omo_on_lr(
         PriorDescent(),
     ],
 )
-def test_tuner_on_rps(algorithm: Algorithm) -> None:
+@pytest.mark.parametrize("stat", ["iter", "rt", "expl"])
+def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> None:
     rps = Environment.rock_paper_scissors()
 
-    alg_tune = algorithm.tune(
-        env_suite=[rps],
+    alg.tune_on_failure_rate(
+        envs=[rps],
+        stat=stat,
+        fail_thresh=100,
         max_iter=500,
         atol=0,
         rtol=1e-1,
-        metric="shifted_geo_mean",
         n_trials=5,
-        timeout=60,
+        timeout=20,
     )
-    assert isinstance(alg_tune, Algorithm)
+    alg.tune_on_geometric_mean(
+        envs=[rps],
+        stat=stat,
+        shift=10,
+        max_iter=500,
+        atol=0,
+        rtol=1e-1,
+        n_trials=5,
+        timeout=20,
+    )

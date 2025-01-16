@@ -155,55 +155,7 @@ class OnlineMirrorDescent(Algorithm):
         return solutions, scores, runtimes
 
     @classmethod
-    def _tuner_instance(cls, trial: optuna.Trial) -> OnlineMirrorDescent:
+    def _init_tuner_instance(cls, trial: optuna.Trial) -> OnlineMirrorDescent:
         return OnlineMirrorDescent(
             alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True),
         )
-
-    def tune(
-        self,
-        env_suite: list[Environment],
-        *,
-        max_iter: int = 100,
-        atol: float = 1e-3,
-        rtol: float = 1e-3,
-        metric: Literal["shifted_geo_mean", "failure_rate"] = "shifted_geo_mean",
-        n_trials: int | None = 10,
-        timeout: float = 30.0,
-    ) -> OnlineMirrorDescent:
-        """Tune the algorithm over a given environment suite.
-
-        Args
-        ----
-        env_suite
-            A list of environment instances.
-        max_iter
-            The number of iterations to run the algorithm on each environment
-            instance.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        metric
-            Determines which metric to be used for scoring a trial. Either
-            ``shifted_geo_mean`` or ``failure_rate``.
-        n_trials
-            The number of trials. If this argument is not given, as many
-            trials are run as possible.
-        timeout
-            Stop tuning after the given number of second(s) on each
-            environment instance. If this argument is not given, as many trials are
-            run as possible.
-        """
-        params = self._optimize_optuna_study(
-            env_suite=env_suite,
-            max_iter=max_iter,
-            atol=atol,
-            rtol=rtol,
-            metric=metric,
-            n_trials=n_trials,
-            timeout=timeout,
-        )
-        if params:
-            self.alpha = params["alpha"]
-        return self
