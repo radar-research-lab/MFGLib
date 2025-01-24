@@ -40,8 +40,6 @@ def mf_omo_params(
     for i in range(1, n_s):
         z = torch.cat((z, torch.roll(v, i, 0)), dim=1)
 
-    # print(z)
-
     # Vector b
     b = torch.zeros((T + 1,) + S)
     b[T] = mu0

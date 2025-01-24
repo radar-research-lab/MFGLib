@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import time
 from typing import Literal
 
@@ -12,29 +11,25 @@ from scipy import sparse
 
 from mfglib.alg.abc import Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
-from mfglib.alg.mf_omo_policy_given_mean_field import (  # TODO: consider renaming this as it's used for both OMI and OMO
-    mf_omo_policy,
-)
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _print_fancy_header,
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
+    extract_policy,
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.metrics import exploitability_score
 
-# torch.set_default_tensor_type(torch.DoubleTensor)
 
-
-### TODO: Change to support warm start and update vectors to be more efficient https://osqp.org/docs/interfaces/python.html#python-interface
+# TODO: Change to support warm start and update vectors to be more efficient
+#  https://osqp.org/docs/interfaces/python.html#python-interface
 def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
-    n = d.size(0)
-    m = A.size(0)
+    n = d.size(dim=0)
 
     # Define the P matrix (2 * I)
     P = 2 * sparse.eye(n, format="csc")
@@ -44,7 +39,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
 
     # Define the constraints l and u
     l = np.concatenate([b.numpy(), np.zeros(n)])
-    u = np.concatenate([b.numpy(), np.inf * np.ones(n)])
+    u = np.concatenate([b.numpy(), np.full(n, np.inf)])
 
     # Define the constraint matrix
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
@@ -53,33 +48,22 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
     res = prob.solve()
 
-    sol = torch.tensor(
-        res.x
-    ).float()  # numpy default is double which is fine; but to get matmul(A, sol) work needs both to be same type
-    ### DEBUG
-    # print(np.sum(np.maximum(-sol.numpy(), 0)), np.sum(sol.numpy()) - 1, np.sum(np.abs((torch.matmul(A,sol) - b).numpy())), sol.shape, A.shape, b.shape)
-    # sol_numpy_reshaped = sol.numpy().reshape(3, 4, 3)
-    # print(np.sum(sol_numpy_reshaped, axis=(1,2)))
-    # print(A, b)
-
-    ### project onto >= 0
-    # sol = torch.tensor(np.maximum(res.x, 0))
-
-    ### this one is definitely wrong as should project to simplex for each timestep
-    # sol = project_onto_simplex(torch.tensor(res.x))
+    # numpy default is double which is fine; but to get matmul(A, sol) work needs
+    # both to be same type
+    sol = torch.tensor(res.x).float()
 
     return sol
 
 
 class OccupationMeasureInclusion(Algorithm):
-    """Online Mirror Descent algorithm.
+    """Occupation Measure Inclusion algorithm.
 
     Notes
     -----
     See [#mfoml]_ for algorithm details.
 
-    .. [#mfoml] Hu, Anran and Zhang, Junzi "MF-OML: Online Mean-Field Reinforcement Learning
-        with Occupation Measures for Large Population Games."
+    .. [#mfoml] Hu, Anran and Zhang, Junzi "MF-OML: Online Mean-Field Reinforcement
+        Learning with Occupation Measures for Large Population Games."
         arXiv preprint arxiv:2405.00282 (2024). https://arxiv.org/abs/2405.00282
     """
 
@@ -91,14 +75,15 @@ class OccupationMeasureInclusion(Algorithm):
         alpha
             Learning rate hyperparameter.
         eta
-            Perturbation coefficient (to accelerate convergence at the cost of asymptotic suboptimality).
+            Perturbation coefficient (to accelerate convergence at the cost of
+            asymptotic suboptimality).
         """
         self.alpha = alpha
         self.eta = eta
 
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
-        return f"OccupationMeasureInclusion(alpha={self.alpha, self.eta})"
+        return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
     def solve(
         self,
@@ -128,18 +113,6 @@ class OccupationMeasureInclusion(Algorithm):
         verbose
             Print convergence information during iteration.
         """
-        T = env_instance.T
-        S = env_instance.S
-        A = env_instance.A
-
-        # d = torch.zeros((T + 1,) + S + A)
-
-        # Auxiliary functions
-        soft_max = torch.nn.Softmax(dim=-1)
-
-        # Auxiliary variables
-        l_s = len(S)
-
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
@@ -177,26 +150,10 @@ class OccupationMeasureInclusion(Algorithm):
             # obtain occupation-measure params
             b, A_d, c_d = mf_omo_params(env_instance, d)
 
-            # print(n, "before update", np.sum(np.abs(d.numpy())))
-
             # Update d and pi
-            d_old = copy.deepcopy(d.numpy())
-
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-
-            # print(f"iter: {n}, residual: {np.sum(np.abs(d.numpy()-d_old))}")
-
-            # print(n, "after update", np.sum(np.abs(d.numpy())))
-
             d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
-
-            # print(d)
-
-            # pi = cast(
-            #     torch.Tensor,
-            #     soft_max(d.flatten(start_dim=1 + l_s)).reshape((T + 1,) + S + A),
-            # ) # previous bug --> btw why did I cast a tensor to tensor?
-            pi = mf_omo_policy(env_instance, d.clone().detach())
+            pi = extract_policy(env_instance, d.clone().detach())
 
             solutions.append(
                 pi.clone().detach()

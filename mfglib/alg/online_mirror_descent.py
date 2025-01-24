@@ -116,9 +116,7 @@ class OnlineMirrorDescent(Algorithm):
         t = time.time()
         for n in range(1, max_iter + 1):
             # Mean-field corresponding to the policy
-            # reveal_type(pi)
             L = mean_field(env_instance, pi)
-            # print(L)
 
             # Q-function corresponding to the policy and mean-field
             Q = QFn(env_instance, L, verify_integrity=False).for_policy(pi)
