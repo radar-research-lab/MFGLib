@@ -70,18 +70,18 @@ def mf_omo_obj(
     b, A_L, c_L = mf_omo_params(env_instance, L)
 
     # Compute the objective
-    obj = torch.zeros(1, dtype=torch.float)
+    obj = torch.zeros(1)
     if loss == "l1":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).abs().sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).abs().sum()
+        obj += c1 * (A_L.matmul(L.flatten()) - b).abs().sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y) + z - c_L).abs().sum()
         obj += c3 * z.mul(L.flatten()).sum()
     if loss == "l2":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).pow(2).sum()
+        obj += c1 * (A_L.matmul(L.flatten()) - b).pow(2).sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y) + z - c_L).pow(2).sum()
         obj += c3 * z.mul(L.flatten()).sum().pow(2)
     if loss == "l1_l2":
-        obj += c1 * (A_L.matmul(L.flatten().float()) - b).pow(2).sum()
-        obj += c2 * (A_L.transpose(0, 1).matmul(y.float()) + z - c_L).pow(2).sum()
+        obj += c1 * (A_L.matmul(L.flatten()) - b).pow(2).sum()
+        obj += c2 * (A_L.transpose(0, 1).matmul(y) + z - c_L).pow(2).sum()
         obj += c3 * z.mul(L.flatten()).sum()
 
     return obj

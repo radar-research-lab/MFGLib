@@ -22,7 +22,7 @@ optuna = "^3.1.0"
 [tool.poetry.group.dev.dependencies]
 isort = "5.13.2"
 black = "24.10.0"
-mypy = "1.13.0"
+mypy = "1.14.1"
 ruff = "0.7.4"
 pytest = "8.3.3"
 coveralls = "3.3.1"
@@ -42,7 +42,7 @@ jupyter_sphinx = "0.5.3"
 profile = "black"
 
 [tool.ruff.lint]
-select = ["D"]
+select = ["D", "F401"]
 ignore = ["D100", "D101", "D102", "D104"]
 # We don't enforce docstrings in test functions
 per-file-ignores = {"tests/test_*.py" = ["D103"]}

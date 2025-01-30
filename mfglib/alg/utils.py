@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import torch
 
@@ -197,21 +197,3 @@ def hat_initialization(
     w_hat = torch.asin(w_hat)
 
     return v_hat, w_hat
-
-
-def shifted_geometric_mean(array: list[int], shift: float = 10.0) -> float:
-    """Compute shifted geometric mean of the elements in an array."""
-    return cast(
-        float,
-        reduce(lambda x, y: x * y, [a + shift for a in array]) ** (1 / len(array))
-        - shift,
-    )
-
-
-def failure_rate(array: list[int], fail_thresh: float) -> float:
-    """Compute the failure rate.
-
-    Failure rate is the portion of the elements in the array that are bigger
-    than or equal to fail_th.
-    """
-    return sum(x >= fail_thresh for x in array) / len(array)

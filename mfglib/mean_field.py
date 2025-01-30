@@ -33,7 +33,7 @@ def mean_field(env: Environment, pi: torch.Tensor) -> torch.Tensor:
     for t in range(1, T + 1):
         prob_prev_fltn = env.prob(t - 1, gamma_pi[t - 1]).flatten(start_dim=l_s)
         gamma_pi_prev_fltn = gamma_pi[t - 1].flatten()
-        s = prob_prev_fltn.matmul(gamma_pi_prev_fltn.float())
+        s = prob_prev_fltn.matmul(gamma_pi_prev_fltn)
         s_rptd = s.repeat(A + ones_s).permute(as_to_sa)
         gamma_pi[t] = pi[t].mul(s_rptd)
 

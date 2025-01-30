@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, cast
+from typing import Callable
 
 import torch
 
@@ -115,6 +115,6 @@ class QFn:
                 .sum(dim=-1)
                 .flatten()
             )
-            return self._transition_probabilities(t) @ pi_q.float()
+            return self._transition_probabilities(t) @ (pi_q)
 
         return self._compute_q_values(future_rewards)

@@ -1,17 +1,9 @@
 from __future__ import annotations
 
-import math
-
 import pytest
 import torch
 
-from mfglib.alg.utils import (
-    failure_rate,
-    hat_initialization,
-    project_onto_simplex,
-    shifted_geometric_mean,
-    tuple_prod,
-)
+from mfglib.alg.utils import hat_initialization, project_onto_simplex, tuple_prod
 from mfglib.env import Environment
 
 
@@ -67,23 +59,3 @@ def test_hat_initialization(env: Environment) -> None:
         assert v_hat.shape == (tuple_prod(size) + 1,)
     assert isinstance(w_hat, torch.Tensor)
     assert w_hat.shape == (tuple_prod((env.T + 1, *env.S)),)
-
-
-def test_shifted_geometric_mean() -> None:
-    x = [100]
-    sgm = shifted_geometric_mean(x)
-    assert sgm == 100.0
-
-    y = [0, 990]
-    sgm = shifted_geometric_mean(y)
-    assert math.isclose(sgm, 90.0, rel_tol=0, abs_tol=1e-5)
-
-
-def test_failure_rate() -> None:
-    x = [100]
-    fr = failure_rate(x, 10.0)
-    assert fr == 1.0
-
-    y = [0, 10, 100, 1000]
-    fr = failure_rate(y, 50.0)
-    assert math.isclose(fr, 0.5, rel_tol=0, abs_tol=1e-5)
