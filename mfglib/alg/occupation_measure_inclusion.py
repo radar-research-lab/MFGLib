@@ -17,7 +17,7 @@ from mfglib.alg.utils import (
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
-    extract_policy,
+    extract_policy_from_mean_field,
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
@@ -56,27 +56,26 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
 
 
 class OccupationMeasureInclusion(Algorithm):
-    """Occupation Measure Inclusion algorithm.
+    """Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting.
 
     Notes
     -----
-    See [#mfoml]_ for algorithm details.
-
-    .. [#mfoml] Hu, Anran and Zhang, Junzi "MF-OML: Online Mean-Field Reinforcement
-        Learning with Occupation Measures for Large Population Games."
-        arXiv preprint arxiv:2405.00282 (2024). https://arxiv.org/abs/2405.00282
+    MF-OMI-FBS recasts the objective of finding a mean-field Nash equilibrium
+    as an inclusion problem with occupation-measure variables. The algorithm
+    is known to have polynomial regret bounds in games with the Lasry-Lions
+    monotonicity property.
     """
 
     def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
-        """MF-OMI-FBS algorithm.
+        """
 
         Attributes
         ----------
         alpha
-            Learning rate hyperparameter.
+            Strictly positive stepsize.
         eta
-            Perturbation coefficient (to accelerate convergence at the cost of
-            asymptotic suboptimality).
+            Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
+            the cost of asymptotic suboptimality.
         """
         self.alpha = alpha
         self.eta = eta
@@ -153,7 +152,7 @@ class OccupationMeasureInclusion(Algorithm):
             # Update d and pi
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
             d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
-            pi = extract_policy(env_instance, d.clone().detach())
+            pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
 
             solutions.append(
                 pi.clone().detach()

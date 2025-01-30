@@ -16,7 +16,7 @@ from mfglib.alg.utils import (
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
-    extract_policy,
+    extract_policy_from_mean_field,
     hat_initialization,
     tuple_prod,
 )
@@ -295,9 +295,11 @@ class MFOMO(Algorithm):
         soft_max = torch.nn.Softmax(dim=-1)
 
         if not self.parameterize:
-            pi = extract_policy(env_instance, L_u_tensor.clone().detach())
+            pi = extract_policy_from_mean_field(
+                env_instance, L_u_tensor.clone().detach()
+            )
         else:
-            pi = extract_policy(
+            pi = extract_policy_from_mean_field(
                 env_instance,
                 soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                     (T + 1,) + S + A
@@ -376,9 +378,11 @@ class MFOMO(Algorithm):
 
             # Compute and store solution policy
             if not self.parameterize:
-                pi = extract_policy(env_instance, L_u_tensor.clone().detach())
+                pi = extract_policy_from_mean_field(
+                    env_instance, L_u_tensor.clone().detach()
+                )
             else:
-                pi = extract_policy(
+                pi = extract_policy_from_mean_field(
                     env_instance,
                     soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                         (T + 1,) + S + A

@@ -27,6 +27,9 @@ napoleon_numpy_docstring = True
 autosectionlabel_prefix_document = True
 bibtex_bibfiles = ["refs.bib"]
 
+add_module_names = False
+autodoc_class_signature = "separated"
+
 exclude_patterns = []
 
 

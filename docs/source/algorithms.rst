@@ -4,18 +4,19 @@ Algorithms
 Overview
 --------
 
-This library comes with 4 implemented MFG algorithms:
+This library comes with five implemented MFG algorithms:
 
 
 * Fictitious Play (:footcite:t:`perrin2020fictitious`)
 * Online Mirror Descent (:footcite:t:`perolat2021`)
 * Prior Descent (:footcite:t:`pmlr-v130-cui21a`)
-* Mean-Field Occupation Measure Optimization (:footcite:t:`2022:guo`)
+* MF-OMO (:footcite:t:`2022:guo`)
+* MF-OMI-FBS (:footcite:t:`2024:MFOMI`)
 
 Creating custom algorithms is as simple as subclassing the abstract class ``mfglib.alg.abc.Algorithm``.
 
-In what follows, we provide more information on each of these algorithms. The default instance of the **Rock Paper Scissors** environment is considered to illustrate algorithms
-performance.
+In what follows, we provide more information on each of these algorithms. The default instance of the
+**Rock Paper Scissors** environment is considered to illustrate algorithms performance.
 
 Fictitious Play
 ^^^^^^^^^^^^^^^
@@ -63,10 +64,11 @@ You can create an instance by importing and instantiating ``PriorDescent``. Let'
 .. plot:: plots.py plot_prior_descent
     :show-source-link: False
 
-Mean-Field Occupation Measure Optimization (MFOMO)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+MF-OMO
+^^^^^^
 
-The algorithm is introduced and explained in details in :footcite:t:`2022:guo`.
+MF-OMO, or Mean-Field Occupation Measure Optimization, is introduced and explained in detail
+in :footcite:t:`2022:guo`.
 
 **Hyperparameters:**
 
@@ -85,6 +87,36 @@ You can create an instance by importing and instantiating ``MFOMO``. Let's see t
 .. plot:: plots.py plot_mf_omo
     :show-source-link: False
 
+MF-OMI-FBS
+^^^^^^^^^^
+
+MF-OMI-FBS, short for Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting, is introduced in :footcite:t:`2024:MFOMI`.
+
+.. autoclass:: mfglib.alg::OccupationMeasureInclusion
+    :no-index:
+    :exclude-members: __new__
+
+.. jupyter-execute::
+    :hide-code:
+
+    import matplotlib.pyplot as plt
+
+    from mfglib.env import Environment
+    from mfglib.alg import OccupationMeasureInclusion
+
+    env = Environment.rock_paper_scissors()
+    for alpha in [0.01, 0.05]:
+        for eta in [0.0, 0.2]:
+            _, expls, _ = OccupationMeasureInclusion(alpha=alpha, eta=eta).solve(
+                env, max_iter=300
+            )
+            plt.semilogy(expls, label=f"{alpha=}, {eta=}")
+
+    plt.legend()
+    plt.grid()
+    plt.xlabel("Iteration")
+    plt.ylabel("Exploitability")
+    plt.title("MF-OMI-FBS on Rock Paper Scissors environment");
 
 Tuning
 ------

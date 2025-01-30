@@ -135,8 +135,10 @@ def project_onto_simplex(
         return torch.ones(len(x)) / len(x) * r
 
 
-def extract_policy(env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
-    """Compute the policy given mean-field for MF-OMO.
+def extract_policy_from_mean_field(
+    env_instance: Environment, L: torch.Tensor
+) -> torch.Tensor:
+    """Compute the policy given mean-field.
 
     Args:
     ----

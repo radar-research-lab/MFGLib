@@ -45,7 +45,7 @@ profile = "black"
 
 [tool.ruff.lint]
 select = ["D", "F401"]
-ignore = ["D100", "D101", "D102", "D104"]
+ignore = ["D100", "D101", "D102", "D104", "D205"]
 # We don't enforce docstrings in test functions
 per-file-ignores = {"tests/test_*.py" = ["D103"]}
 
