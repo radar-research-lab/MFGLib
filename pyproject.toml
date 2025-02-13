@@ -14,8 +14,7 @@ license = "MIT"
 documentation = "https://mfglib.readthedocs.io/en/latest/"
 
 [tool.poetry.dependencies]
-# coveralls sets an upper bound on the Python version
-python = ">=3.9,<3.13"
+python = "^3.9"
 torch = "^2"
 numpy = "^2"
 optuna = "^3.0"
@@ -28,7 +27,7 @@ black = "25.1.0"
 mypy = "1.15.0"
 ruff = "0.9.6"
 pytest = "8.3.4"
-coveralls = "4.0.1"
+coverage = "7.6.12"
 
 [tool.poetry.group.docs]
 optional = true
