@@ -25,7 +25,7 @@ jobs:
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 64b00e45279c946ba2bb77173bf562de
-          filename: mfglib-covbadge.json.json
+          filename: mfglib-covbadge.json
           label: Coverage
           message: ${{ env.total }}%
           minColorRange: 50
