@@ -1,28 +1,16 @@
 <h1 align="center">MFGLib: A Library for Mean-Field Games</h1>
 
 <p align="center">
-    <a href='https://mfglib.readthedocs.io/en/latest/?badge=latest'>
-        <img src='https://readthedocs.org/projects/mfglib/badge/?version=latest' alt='Documentation Status' />
-    </a>
+    <a href='https://mfglib.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/mfglib/badge/?version=latest' alt='Documentation Status' /></a>
     <a href="http://mypy-lang.org/">
         <img alt="Checked with mypy" src="http://www.mypy-lang.org/static/mypy_badge.svg">
     </a>
-    <a href="https://github.com/charliermarsh/ruff">
-        <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json&label=linting" alt="Ruff" style="max-width:100%;">
-    </a>
-    <a href="https://github.com/psf/black">
-        <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg">
-    </a>
-    <a href="https://pycqa.github.io/isort/">
-        <img alt="Imports: isort" src="https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336">
-    </a>
+    <a href="https://github.com/charliermarsh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json&label=linting" alt="Ruff" style="max-width:100%;"></a>
+    <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+    <a href="https://pycqa.github.io/isort/"><img alt="Imports: isort" src="https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336"></a>
     <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/matteosantama/64b00e45279c946ba2bb77173bf562de/raw/mfglib-covbadge.json" alt="Code coverage badge">
-    <a href="https://pypi.org/project/mfglib/">
-        <img src="https://img.shields.io/pypi/v/mfglib" alt="PyPI Version">
-    </a>
-    <a href="https://github.com/radar-research-lab/MFGLib/blob/main/LICENSE">
-        <img src="https://img.shields.io/github/license/radar-research-lab/mfglib" alt="License: MIT">
-    </a>
+    <a href="https://pypi.org/project/mfglib/"><img src="https://img.shields.io/pypi/v/mfglib" alt="PyPI Version"></a>
+    <a href="https://github.com/radar-research-lab/MFGLib/blob/main/LICENSE"><img src="https://img.shields.io/github/license/radar-research-lab/mfglib" alt="License: MIT"></a>
 </p>
 
 ## Overview
