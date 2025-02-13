@@ -16,7 +16,7 @@
     <a href="https://pycqa.github.io/isort/">
         <img alt="Imports: isort" src="https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336">
     </a>
-    <a href='https://coveralls.io/github/radar-research-lab/MFGLib?branch=main'><img src='https://coveralls.io/repos/github/radar-research-lab/MFGLib/badge.svg?branch=main' alt='Coverage Status' /></a>
+    <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/matteosantama/123abc456def789/raw/mfglib-covbadge.json" alt="Code coverage badge">
     <a href="https://pypi.org/project/mfglib/">
         <img src="https://img.shields.io/pypi/v/mfglib" alt="PyPI Version">
     </a>

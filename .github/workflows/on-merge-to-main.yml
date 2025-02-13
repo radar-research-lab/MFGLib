@@ -1,0 +1,34 @@
+# Action is credited to Ned Batchelder
+# https://nedbatchelder.com/blog/202209/making_a_coverage_badge.html
+on:
+  push:
+    branches:
+      - main
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: snok/install-poetry@v1
+      - run: |
+          poetry --version
+          poetry install
+          source $VENV
+          coverage run -m pytest
+          coverage json
+          export TOTAL=$(python -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+          echo "total=$TOTAL" >> $GITHUB_ENV
+          echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
+      - uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 64b00e45279c946ba2bb77173bf562de
+          filename: mfglib-covbadge.json.json
+          label: Coverage
+          message: ${{ env.total }}%
+          minColorRange: 50
+          maxColorRange: 90
+          valColorRange: ${{ env.total }}
