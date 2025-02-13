@@ -16,9 +16,8 @@ jobs:
       - run: |
           poetry --version
           poetry install
-          source $VENV
-          coverage run -m pytest
-          coverage json
+          poetry run coverage run -m pytest
+          poetry run coverage json
           export TOTAL=$(python -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
           echo "total=$TOTAL" >> $GITHUB_ENV
           echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
