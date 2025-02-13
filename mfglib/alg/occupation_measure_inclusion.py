@@ -1,49 +1,88 @@
 from __future__ import annotations
 
 import time
-from typing import Literal, cast
+from typing import Literal
 
+import numpy as np
 import optuna
+import osqp
 import torch
+from scipy import sparse
 
 from mfglib.alg.abc import Algorithm
-from mfglib.alg.q_fn import QFn
+from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _print_fancy_header,
     _print_fancy_table_row,
     _print_solve_complete,
     _trigger_early_stopping,
+    extract_policy_from_mean_field,
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.metrics import exploitability_score
 
 
-class OnlineMirrorDescent(Algorithm):
-    """Online Mirror Descent algorithm.
+# TODO: Change to support warm start and update vectors to be more efficient
+#  https://osqp.org/docs/interfaces/python.html#python-interface
+def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
+    """Project d onto Ad=b, d>=0."""
+    # Problem dimensions
+    n = d.size(dim=0)
+
+    # Define the P matrix (2 * I)
+    P = 2 * sparse.eye(n, format="csc")
+
+    # Define the q vector (-2 * a)
+    q = -2 * d.numpy()
+
+    # Define the constraints l and u
+    l = np.concatenate([b.numpy(), np.zeros(n)])
+    u = np.concatenate([b.numpy(), np.full(n, np.inf)])
+
+    # Define the constraint matrix
+    A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
+
+    prob = osqp.OSQP()
+    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
+    res = prob.solve()
+
+    # numpy default is double which is fine; but to get matmul(A, sol) work needs
+    # both to be same type
+    sol = torch.tensor(res.x).float()
+
+    return sol
+
+
+class OccupationMeasureInclusion(Algorithm):
+    """Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting.
 
     Notes
     -----
-    See [#omd1]_ for algorithm details.
-
-    .. [#omd1] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
+    MF-OMI-FBS recasts the objective of finding a mean-field Nash equilibrium
+    as an inclusion problem with occupation-measure variables. The algorithm
+    is known to have polynomial regret bounds in games with the Lasry-Lions
+    monotonicity property.
     """
 
-    def __init__(self, alpha: float = 1.0) -> None:
-        """Online Mirror Descent algorithm.
+    def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
+        """
 
         Attributes
         ----------
         alpha
-            Learning rate hyperparameter.
+            Strictly positive stepsize.
+        eta
+            Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
+            the cost of asymptotic suboptimality.
         """
         self.alpha = alpha
+        self.eta = eta
 
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
-        return f"OnlineMirrorDescent(alpha={self.alpha})"
+        return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
     def solve(
         self,
@@ -73,18 +112,6 @@ class OnlineMirrorDescent(Algorithm):
         verbose
             Print convergence information during iteration.
         """
-        T = env_instance.T
-        S = env_instance.S
-        A = env_instance.A
-
-        y = torch.zeros((T + 1,) + S + A)
-
-        # Auxiliary functions
-        soft_max = torch.nn.Softmax(dim=-1)
-
-        # Auxiliary variables
-        l_s = len(S)
-
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
@@ -113,22 +140,23 @@ class OnlineMirrorDescent(Algorithm):
                 _print_solve_complete(seconds_elapsed=runtimes[0])
             return solutions, scores, runtimes
 
+        # initialize d = L^pi
+        d = mean_field(env_instance, pi)
+        d_shape = list(d.shape)  # non-flattened shape of d
+
         t = time.time()
         for n in range(1, max_iter + 1):
-            # Mean-field corresponding to the policy
-            L = mean_field(env_instance, pi)
+            # obtain occupation-measure params
+            b, A_d, c_d = mf_omo_params(env_instance, d)
 
-            # Q-function corresponding to the policy and mean-field
-            Q = QFn(env_instance, L, verify_integrity=False).for_policy(pi)
+            # Update d and pi
+            d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+            d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+            pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
 
-            # Update y and pi
-            y += self.alpha * Q
-            pi = cast(
-                torch.Tensor,
-                soft_max(y.flatten(start_dim=1 + l_s)).reshape((T + 1,) + S + A),
-            )
-
-            solutions.append(pi.clone().detach())
+            solutions.append(
+                pi.clone().detach()
+            )  # do we need to clone + detach again? no? same for MF-OMO？
             scores.append(exploitability_score(env_instance, pi))
             if scores[n] < scores[argmin]:
                 argmin = n
@@ -154,7 +182,7 @@ class OnlineMirrorDescent(Algorithm):
         return solutions, scores, runtimes
 
     @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> OnlineMirrorDescent:
-        return OnlineMirrorDescent(
-            alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True),
+    def _init_tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
+        return OccupationMeasureInclusion(
+            alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
         )
