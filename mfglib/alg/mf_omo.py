@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import time
+from pathlib import Path
 from typing import Any, Literal
 
 import optuna
@@ -156,6 +158,49 @@ class MFOMO(Algorithm):
         self.optimizer = optimizer
         self.parameterize = parameterize
         self.hat_init = hat_init
+
+    def save(self, path: Path | str) -> None:
+        path = Path(path) / self.__class__.__name__
+        path.mkdir(exist_ok=False)
+        with open(path / "kwargs.json", "w") as f:
+            json_kwargs = {
+                "loss": self.loss,
+                "c1": self.c1,
+                "c2": self.c2,
+                "c3": self.c3,
+                "rb_freq": self.rb_freq,
+                "m1": self.m1,
+                "m2": self.m2,
+                "m3": self.m3,
+                "optimizer": self.optimizer,
+                "parameterize": self.parameterize,
+                "hat_init": self.hat_init,
+            }
+            json.dump(json_kwargs, f, indent=4)
+        if self.parameterize:
+            torch.save(self._L_or_u, path / "u.pt")
+            torch.save(self._z_or_v, path / "v.pt")
+            torch.save(self._y_or_w, path / "w.pt")
+        else:
+            torch.save(self._L_or_u, path / "L.pt")
+            torch.save(self._z_or_v, path / "z.pt")
+            torch.save(self._y_or_w, path / "y.pt")
+
+    @classmethod
+    def load(cls, path: Path | str) -> MFOMO:
+        path = Path(path) / cls.__name__
+        with open(path / "kwargs.json", "r") as f:
+            kwargs = json.load(f)
+        tensors = {}
+        if kwargs["parameterize"]:
+            tensors["u"] = torch.load(path / "u.pt")
+            tensors["v"] = torch.load(path / "v.pt")
+            tensors["w"] = torch.load(path / "w.pt")
+        else:
+            tensors["L"] = torch.load(path / "L.pt")
+            tensors["z"] = torch.load(path / "z.pt")
+            tensors["y"] = torch.load(path / "y.pt")
+        return MFOMO(**kwargs, **tensors)
 
     def _init_L(self, env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
         if self._L_or_u is None:
