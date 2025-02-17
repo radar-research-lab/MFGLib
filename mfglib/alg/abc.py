@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import abc
+import json
 import warnings
+from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, TypeVar
 
 import numpy as np
@@ -31,6 +33,19 @@ class Algorithm(abc.ABC):
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy."""
         raise NotImplementedError
+
+    def save(self, path: Path | str) -> None:
+        path = Path(path) / self.__class__.__name__
+        path.mkdir(exist_ok=False)
+        with open(path / "kwargs.json", "w") as f:
+            json.dump(self.__dict__, f, indent=4)
+
+    @classmethod
+    def load(cls: type[Self], path: Path | str) -> Self:
+        path = Path(path) / cls.__name__
+        with open(path / "kwargs.json", "r") as f:
+            kwargs = json.load(f)
+        return cls(**kwargs)
 
     @abc.abstractmethod
     def __str__(self) -> str:
