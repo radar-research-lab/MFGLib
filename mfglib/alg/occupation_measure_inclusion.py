@@ -9,7 +9,7 @@ import osqp
 import torch
 from scipy import sparse
 
-from mfglib.alg.abc import Algorithm
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import (
     _ensure_free_tensor,
@@ -89,9 +89,9 @@ class OccupationMeasureInclusion(Algorithm):
         env_instance: Environment,
         *,
         pi: Literal["uniform"] | torch.Tensor = "uniform",
-        max_iter: int = 100,
-        atol: float | None = 1e-3,
-        rtol: float | None = 1e-3,
+        max_iter: int = DEFAULT_MAX_ITER,
+        atol: float | None = DEFAULT_ATOL,
+        rtol: float | None = DEFAULT_RTOL,
         verbose: bool = False,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
