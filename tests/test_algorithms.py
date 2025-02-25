@@ -105,17 +105,27 @@ def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> No
 
     alg.tune(
         envs=[rps],
-        pi0s=[],
+        pi0s="uniform",
         metric=FailureRate(fail_thresh=100, stat=stat),
-        solve_kwargs={"max_iter": 500},
+        solve_kwargs={"max_iter": 200},
         n_trials=5,
         timeout=20,
     )
+    # NOTE: fail_thresh is not required when stat == "rt"
+    if stat != "rt":
+        alg.tune(
+            envs=[rps],
+            pi0s="uniform",
+            metric=FailureRate(stat=stat),
+            solve_kwargs={"max_iter": 200},
+            n_trials=5,
+            timeout=20,
+        )
     alg.tune(
         envs=[rps],
-        pi0s=[],
+        pi0s="uniform",
         metric=GeometricMean(shift=1.0, stat=stat),
-        solve_kwargs={"max_iter": 500},
+        solve_kwargs={"max_iter": 200},
         n_trials=5,
         timeout=20,
     )

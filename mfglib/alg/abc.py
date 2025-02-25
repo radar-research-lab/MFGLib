@@ -4,7 +4,7 @@ import abc
 import json
 import warnings
 from pathlib import Path
-from typing import Final, Iterable, Literal, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Final, Iterable, Literal, Sequence, TypedDict, TypeVar
 
 import optuna
 import torch
@@ -12,7 +12,9 @@ from optuna.exceptions import ExperimentalWarning
 from optuna.samplers import PartialFixedSampler
 
 from mfglib.env import Environment
-from mfglib.tuning import Metric
+
+if TYPE_CHECKING:
+    from mfglib.tuning import Metric
 
 Self = TypeVar("Self", bound="Algorithm")
 
@@ -70,9 +72,9 @@ class Algorithm(abc.ABC):
 
     def tune(
         self,
-        envs: Iterable[Environment],
-        pi0s: Iterable[torch.Tensor],
         metric: Metric,
+        envs: Sequence[Environment],
+        pi0s: Sequence[torch.Tensor] | Literal["uniform"] = "uniform",
         solve_kwargs: SolveKwargs | None = None,
         sampler: optuna.samplers.BaseSampler | None = None,
         frozen_attrs: Iterable[str] | None = None,
@@ -82,9 +84,10 @@ class Algorithm(abc.ABC):
         """Tune the algorithm over multiple environment/initialization pairs.
 
         Args:
-            envs: List of environment targets.
-            pi0s: List of initial policies.
             metric: Objective function to minimizer.
+            envs: List of environment targets.
+            pi0s: Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
+                computing the metrics.
             solve_kwargs: Additional keyword arguments passed to the solver.
             sampler: The sampler used to explore the search space of the optimization.
                 If `None`, the default sampler `optuna.samplers.TPESampler` is used.
@@ -98,7 +101,8 @@ class Algorithm(abc.ABC):
             timeout: Stop study after the given number of second(s). Refer to `optuna`
                 documentation for further details.
 
-        Returns:
+        Returns
+        -------
             An `optuna.Study` object containing the optimization result.
         """
         if sampler is None:
@@ -113,7 +117,17 @@ class Algorithm(abc.ABC):
 
         def objective(trial: optuna.Trial) -> float:
             solver = self._init_tuner_instance(trial)
-            return metric.score(solver, envs, pi0s, solve_kwargs)
+            solns, expls, rts = [], [], []
+            for i, env in enumerate(envs):
+                if pi0s == "uniform":
+                    pi0: Literal["uniform"] | torch.Tensor = "uniform"
+                else:
+                    pi0 = pi0s[i]
+                soln, expl, rt = solver.solve(env, pi=pi0, **solve_kwargs)
+                solns.append(soln)
+                expls.append(expl)
+                rts.append(rt)
+            return metric.score(solns, expls, rts, solve_kwargs)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ExperimentalWarning)
