@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, Literal, Protocol, cast
+from typing import Literal, Protocol, cast
 
 import numpy as np
+import torch
 
-if TYPE_CHECKING:
-    import torch
-
-    from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, Algorithm, SolveKwargs
-    from mfglib.env import Environment
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, SolveKwargs
 
 
 class Metric(Protocol):
     def score(
         self,
-        solver: Algorithm,
-        envs: Iterable[Environment],
-        pi0s: Iterable[torch.Tensor],
-        solver_kwargs: SolveKwargs,
+        solns: list[list[torch.Tensor]],
+        expls: list[list[float]],
+        rts: list[list[float]],
+        solve_kwargs: SolveKwargs,
     ) -> float: ...
 
 
@@ -50,9 +47,9 @@ class FailureRate:
 
     def score(
         self,
-        solver: Algorithm,
-        envs: Iterable[Environment],
-        pi0s: Iterable[torch.Tensor],
+        solns: list[list[torch.Tensor]],
+        expls: list[list[float]],
+        rts: list[list[float]],
         solve_kwargs: SolveKwargs,
     ) -> float:
         if self.fail_thresh is None:
@@ -70,18 +67,16 @@ class FailureRate:
         else:
             fail_thresh = self.fail_thresh
 
-        stats = []
-        for env in envs:
-            for pi0 in pi0s:
-                solns, expls, rts = solver.solve(env, pi=pi0, **solve_kwargs)
-                if self.stat == "iter":
-                    stats.append(len(solns) - 1.0)
-                elif self.stat == "rt":
-                    stats.append(rts[-1])
-                elif self.stat == "expl":
-                    stats.append(min(expls))
-        stats_arr = np.array(stats)
-        return cast(float, (stats_arr >= fail_thresh).mean())
+        if self.stat == "iter":
+            stats = np.array([len(trace) - 1 for trace in solns])
+        elif self.stat == "rt":
+            stats = np.array([trace[-1] for trace in rts])
+        elif self.stat == "expl":
+            stats = np.array([min(trace) for trace in expls])
+        else:
+            raise ValueError(f"{self.stat=} invalid")
+
+        return cast(float, (stats >= fail_thresh).mean())
 
 
 class GeometricMean:
@@ -106,23 +101,21 @@ class GeometricMean:
 
     def score(
         self,
-        solver: Algorithm,
-        envs: Iterable[Environment],
-        pi0s: Iterable[torch.Tensor],
+        solns: list[list[torch.Tensor]],
+        expls: list[list[float]],
+        rts: list[list[float]],
         solve_kwargs: SolveKwargs,
     ) -> float:
-        stats = []
-        for env in envs:
-            for pi0 in pi0s:
-                solns, expls, rts = solver.solve(env, pi=pi0, **solve_kwargs)
-                if self.stat == "iter":
-                    stats.append(len(solns) - 1.0)
-                elif self.stat == "rt":
-                    stats.append(rts[-1])
-                elif self.stat == "expl":
-                    stats.append(min(expls))
-        stats_arr = np.array(stats)
+        if self.stat == "iter":
+            stats = np.array([len(trace) - 1 for trace in solns])
+        elif self.stat == "rt":
+            stats = np.array([trace[-1] for trace in rts])
+        elif self.stat == "expl":
+            stats = np.array([min(trace) for trace in expls])
+        else:
+            raise ValueError(f"{self.stat=} invalid")
+
         return cast(
             float,
-            ((stats_arr + self.shift).prod() ** (1.0 / stats_arr.size)) - self.shift,
+            ((stats + self.shift).prod() ** (1.0 / stats.size)) - self.shift,
         )
