@@ -121,58 +121,59 @@ MF-OMI-FBS, short for Mean-Field Occupation Measure Inclusion with Forward-Backw
 Tuning
 ------
 As you may have noticed in the previous section, choosing the right set hyperparameters is essential to get the best
-performance out of an algorithm. A set of hyperparameters could work for one environment but result in a poor performance in other environments. Even
-two distinct instances of the same environment could require very different sets of hyperparameters. Accordingly,
-manually tuning the hyperparameters for algorithms such as **Fictitious Play** and **Online Mirror Descent**, despite
-having only one tunable parameter, is not very straight forward, let alone for **Prior Descent** and specifically
-for **MFOMO** that have several hyperparameters with a wide value range.
+performance out of an algorithm. A set of hyperparameters could work for one environment but result in a poor
+performance in other environments. Even two distinct instances of the same environment could require very different
+sets of hyperparameters. Accordingly, manually tuning the hyperparameters for algorithms such as ``FictitiousPlay``
+and ``OnlineMirrorDescent``, despite having only one tunable parameter, is not very straightforward, let alone for
+``PriorDescent`` or ``MFOMO`` which have several hyperparameters.
 
-All the algorithms in ``MFGLib`` are equipped with built-in hyperparameter tuning which could be used to tune the
-algorithms on one single environment instance or a suite of several environment instances. The tuners are based on
-Optuna (:footcite:t:`optuna_2019`), an open-source  optimization framework used to automate hyperparameter search.
-``mfglib`` algorithms have two tuning methods: ``.tune_on_failure_rate(...)`` and ``.tune_on_geometric_mean(...)``.
-Both methods take a parameter ``stat:  Literal["iter", "rt", "expl"]`` which lets you choose which statistic to optimize.
+All the algorithms in ``MFGLib`` are equipped with built-in hyperparameter tuning which can be used to tune the
+algorithms. Under the hood, the tuners are based on Optuna (:footcite:t:`optuna_2019`), an open-source  optimization
+framework used to automate hyperparameter search. The tuning procedure aims to minimize some measure of performance.
+In ``MFGLib``, such a measure is represented by a ``Metric`` object.
 
-Let's look at ``.tune_on_failure_rate(...)`` first. The method takes another parameter ``fail_thresh`` that is used to
-determine if a particular trial is considered a failure. If ``stat="iter"`` then a trial is considered a failure if
-the solver runs for more than ``fail_thresh`` iterations. If ``stat="rt"`` then a trial is considered a failure if the
-solver runs for more than ``fail_thresh`` seconds. If ``stat="expl"`` then a trial is considered a failure if the solver
-does not reduce exploitability below ``fail_thresh``. ``.tune_on_failure_rate(...)`` will return the hyperparameters that
-minimize failures across the environment suite.
+.. autoclass:: mfglib.tuning::Metric
+    :members:
 
-Instead of identifying "failures", ``.tune_on_geometric_mean(...)`` simply returns the hyperparameters that minimize
-the geometric mean across the environment suite. The method takes an optional ``shift`` argument if you would prefer
-to minimize a shifted geometric mean.
+To design a custom ``Metric``, a user need only to create a class that implements ``.evaluate()``. ``MFGLib``
+comes equipped with two built-in metrics.
 
-``.tune_on_failure_rate(...)`` and ``.tune_on_geometric_mean(...)`` share additional arguments as well:
+.. autoclass:: mfglib.tuning::FailureRate
+    :class-doc-from: init
 
-* ``envs``: This is the list of environments we want to tune our algorithm on.
-* ``pi``: The initial policy to use when conducting hyperparameter optimization.
-* ``max_iter``: This determines for how many iterations each algorithm trial should be run on each environment instance in the environment suite.
-* ``atol`` and ``rtol``: Determine the early stopping parameters.
-* ``sampler``: An instance of ``optuna.samplers.BaseSampler``; this lets you control the hyperparameter search.
-* ``frozenattrs``: A list of algorithm attributes you wish to freeze during the hyperparameter search. Anything listed here will not be optimized.
-* ``n_trials``: The number of trials. If this argument is not given, as many trials are run as possible.
-* ``timeout``: Stop tuning after the given number of second(s). 
+.. autoclass:: mfglib.tuning::GeometricMean
+    :class-doc-from: init
 
-To demonstrate how the tuner works, let's consider an instance of the **Building Evacuation** environment and tune
-the **Online Mirror Descent** algorithm on it. We will compare the performance of the tuned and default algorithms.
+
+An algorithm's ``.tune()`` takes several other additional parameters:
+
+.. automethod:: mfglib.alg.abc::Algorithm.tune
+
+To demonstrate how the tuner works, let's consider an instance of the ``BuildingEvacuation`` environment and tune
+the ``OnlineMirrorDescent`` algorithm on it. We will compare the performance of the tuned and default algorithms.
 
 The tuner runs for 20 trials and the time limit is 60 seconds. Note that
 ``envs=[Environment.building_evacuation(T=5, n_floor=10, floor_l=5, floor_w=5)]`` as we want to tune the algorithm only
 on one specific environment instance.
 
-.. jupyter-execute::
-    :hide-code:
+.. plot::
+    :context:
+    :nofigs:
+    :show-source-link: False
 
     import optuna
 
-    from mfglib.alg import OnlineMirrorDescent
-    from mfglib.env import Environment
-
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-.. jupyter-execute::
+.. plot::
+    :context:
+    :nofigs:
+    :include-source:
+    :show-source-link: False
+
+    from mfglib.alg import OnlineMirrorDescent
+    from mfglib.env import Environment
+    from mfglib.tuning import GeometricMean
 
     env = Environment.building_evacuation(
         T=5, n_floor=10, floor_l=5, floor_w=5
@@ -183,29 +184,28 @@ on one specific environment instance.
     _, expls_default, _ = omd.solve(env)
 
     # Tune the algorithm to create an `optuna.Study` object.
-    optuna_study = omd.tune_on_geometric_mean(
-        envs=[env], shift=10, stat="expl", n_trials=20
+    optuna_study = omd.tune(
+        metric=GeometricMean(stat="expl"), envs=[env], n_trials=20
     )
 
-    # Modify the algorithm's parameters in place.
+    # Modify the algorithm's parameters in-place.
     for key, val in optuna_study.best_params.items():
         setattr(omd, key, val)
 
-    # Run the tuned algorithm on the environment so we can compare scores.
+    # Re-run the tuned algorithm on the environment.
     _, expls_tuned, _ = omd.solve(env)
 
-.. jupyter-execute::
-    :hide-code:
+.. plot::
+    :context:
+    :show-source-link: False
 
-    import matplotlib.pyplot as plt
-
-    plt.title("Building Evacuation Environment - Online Mirror Descent Algorithm")
-    plt.semilogy(expls_default, label="Default")
-    plt.semilogy(expls_tuned, label="Tuned")
+    plt.figure(figsize=(10, 5))
+    plt.title("Exploitability Scores")
+    plt.semilogy(expls_default, label="expls_default")
+    plt.semilogy(expls_tuned, label="expls_tuned")
     plt.legend(loc=3)
     plt.grid()
-    plt.xlabel("Iteration")
-    plt.ylabel("Exploitability")
+    plt.xlabel("iteration")
     plt.show()
 
 
@@ -214,7 +214,7 @@ performance, but we may need to run the tuner for more trials and time.
 
 A few remarks about the tuner:
 
-1. To ensure that the tuned hyperparameters work well on a broader range of environments, we can pass a list of multiple environment instances to the tuner via the ``env_suite`` input argument.
+1. To ensure that the tuned hyperparameters work well on a broader range of environments, we can pass a list of multiple environment instances to the tuner via the ``envs`` input argument.
 2. The default set of hyperparameters may not be used during the tuning process. Consequently, there might be cases in which the default algorithm outperforms the tuned algorithm.
 3. Depending on the the values of the tuner's inputs such as ``max_iter``, ``atol``, ``rtol``, etc., it is possible that none of the algorithm trials solve any of the environment instances in which case the tuner does nothing.
 

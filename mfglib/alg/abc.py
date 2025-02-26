@@ -83,27 +83,39 @@ class Algorithm(abc.ABC):
     ) -> optuna.Study:
         """Tune the algorithm over multiple environment/initialization pairs.
 
-        Args:
-            metric: Objective function to minimizer.
-            envs: List of environment targets.
-            pi0s: Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
+        Args
+        ----
+            metric
+                Objective function to minimizer.
+            envs
+                List of environment targets.
+            pi0s
+                Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
                 computing the metrics.
-            solve_kwargs: Additional keyword arguments passed to the solver.
-            sampler: The sampler used to explore the search space of the optimization.
-                If `None`, the default sampler `optuna.samplers.TPESampler` is used.
-                The sampler guides how different hyperparameter trials are selected.
-            frozen_attrs: A list of attributes that should be frozen (i.e., fixed) during the
+            solve_kwargs
+                Additional keyword arguments passed to the solver.
+            sampler
+                The sampler used to explore the search space of the optimization.
+                If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
+                used. The sampler guides how different hyperparameter trials are
+                selected.
+            frozen_attrs
+                A list of attributes that should be frozen (i.e., fixed) during the
                 optimization process. These attributes will not be considered for
                 optimization, and their values will be taken directly from the instance
                 of the class.
-            n_trials: The  number of trials to run. Refer to `optuna` documentation for
-                further details on the handling of `None`.
-            timeout: Stop study after the given number of second(s). Refer to `optuna`
+            n_trials
+                The  number of trials to run. Refer to ``optuna`` documentation for
+                further details on the handling of ``None``.
+            timeout
+                Stop study after the given number of second(s). Refer to ``optuna``
                 documentation for further details.
 
         Returns
         -------
-            An `optuna.Study` object containing the optimization result.
+        optuna.Study
+            The result of the hyperparameter tuning process.
+
         """
         if sampler is None:
             sampler = optuna.samplers.TPESampler()
@@ -117,17 +129,17 @@ class Algorithm(abc.ABC):
 
         def objective(trial: optuna.Trial) -> float:
             solver = self._init_tuner_instance(trial)
-            solns, expls, rts = [], [], []
+            pis, expls, rts = [], [], []
             for i, env in enumerate(envs):
                 if pi0s == "uniform":
                     pi0: Literal["uniform"] | torch.Tensor = "uniform"
                 else:
                     pi0 = pi0s[i]
-                soln, expl, rt = solver.solve(env, pi=pi0, **solve_kwargs)
-                solns.append(soln)
-                expls.append(expl)
-                rts.append(rt)
-            return metric.score(solns, expls, rts, solve_kwargs)
+                pi, expl, rt = solver.solve(env, pi=pi0, **solve_kwargs)
+                pis += [pi]
+                expls += [expl]
+                rts += [rt]
+            return metric.evaluate(pis, expls, rts, solve_kwargs)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ExperimentalWarning)

@@ -21,7 +21,7 @@ from mfglib.alg.utils import (
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.metrics import exploitability_score
+from mfglib.scoring import exploitability_score
 
 
 # TODO: Change to support warm start and update vectors to be more efficient

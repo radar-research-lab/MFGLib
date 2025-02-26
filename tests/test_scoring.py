@@ -1,7 +1,7 @@
 import torch
 
 from mfglib.env import Environment
-from mfglib.metrics import exploitability_score
+from mfglib.scoring import exploitability_score
 
 
 def test_exploitability_score() -> None:

@@ -23,7 +23,7 @@ from mfglib.alg.utils import (
     tuple_prod,
 )
 from mfglib.env import Environment
-from mfglib.metrics import exploitability_score
+from mfglib.scoring import exploitability_score
 
 DEFAULT_OPTIMIZER = {
     "name": "Adam",
