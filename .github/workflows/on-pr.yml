@@ -1,12 +1,6 @@
-name: on-pull-request
+name: on-pr
 on:
-  pull_request:
-    paths:
-      - mfglib/**
-      - tests/**
-      - docs/source/*.py
-      - pyproject.toml
-      - .github/workflows/lint-and-test.yml
+  pull_request
 jobs:
   lint:
     defaults:
@@ -15,28 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
       - run: |
           poetry --version
           poetry install
-          source $VENV
-          black . --check
-          isort . --check
-          ruff check mfglib tests
+          poetry run black . --check
+          poetry run isort . --check
+          poetry run ruff check mfglib tests
+          poetry run mypy --python-version 3.9
+          poetry run mypy --python-version 3.10
+          poetry run mypy --python-version 3.11
+          poetry run mypy --python-version 3.12
   test:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     defaults:
       run:
         shell: bash
@@ -46,18 +38,11 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
       - run: |
           poetry --version
           poetry install
-          source $VENV
-          mypy
-          pytest --durations 5
+          poetry run pytest -x --durations 5
