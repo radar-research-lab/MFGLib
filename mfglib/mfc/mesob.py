@@ -1,24 +1,11 @@
 from __future__ import annotations
 
-from typing import Callable, TypedDict
+from typing import Any, Callable, TypedDict
 
 import torch.nn
 
-
-class Environment:
-    T: int
-    S: int
-    A: int
-    r_max: int
-    mu0: torch.Tensor
-
-    def r(self, t: int, L_t: torch.Tensor) -> torch.Tensor:
-        """Returned reward vector is (S, A)-shaped."""
-        raise NotImplementedError
-
-    def P(self, t: int, L_t: torch.Tensor) -> torch.Tensor:
-        """Returned transition kernel is (S, A, S)-shaped."""
-        raise NotImplementedError
+from mfglib.env import Environment
+from mfglib.metrics import exploitability_score
 
 
 class MESOB:
@@ -27,7 +14,7 @@ class MESOB:
         """MESOB-specific keyword arguments passed into solve()."""
 
         opt_cls: type[torch.optim.Optimizer]
-        opt_kwargs: dict[str, float]
+        opt_kwargs: dict[str, Any]
         y0: torch.Tensor
         z0: torch.Tensor
         d0: torch.Tensor
@@ -38,15 +25,13 @@ class MESOB:
         def __init__(
             self,
             env: Environment,
-            social_weights: list[float],
-            social_metrics: list[Callable[[torch.Tensor], float]],
+            social_reward: Callable[[torch.Tensor], float],
             w: float,
             rho: tuple[float, float],
         ) -> None:
             super().__init__()
             self.env = env
-            self.social_weights = torch.tensor(social_weights)
-            self.social_metrics = social_metrics
+            self.social_reward = social_reward
             self.w = w
             self.rho = rho
 
@@ -54,35 +39,42 @@ class MESOB:
             self, d: torch.Tensor, y: torch.Tensor, z: torch.Tensor
         ) -> torch.Tensor:
             return (
-                -sum(
-                    wgt * V(d)
-                    for wgt, V in zip(self.social_weights, self.social_metrics)
-                )
+                -self.social_reward(d)
                 + self.w * torch.einsum("tsa,tsa->", z, d)
                 + self.rho[0] * self.g(d)
                 + self.rho[1] * self.h(y, z, d)
             )
 
         def g(self, d: torch.Tensor) -> torch.Tensor:
-            err = torch.empty([self.env.T + 1, self.env.S])
+            err = torch.empty(self.env.T + 1, self.env.n_states, dtype=torch.float)
             for t in range(self.env.T):
-                P_t = self.env.P(t, d[t])
-                for s in range(self.env.S):
-                    LHS = torch.einsum("sa,sa->", P_t[:, :, s], d[t])
-                    RHS = d[t + 1, s].sum()
-                    err[t, s] = LHS - RHS
-            err[self.env.T] = d[0].sum(dim=-1) - self.env.mu0
+                P_t = self.env.prob(t, d[t])
+                term_1 = torch.einsum("saj,sa->j", P_t, d[t])
+                term_2 = torch.einsum("ja->j", d[t + 1])
+                err[t] = term_1 - term_2
+            err[self.env.T] = torch.einsum("sa->s", d[0]) - self.env.mu0
             return err.square().sum()
 
         def h(self, y: torch.Tensor, z: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-            err = torch.empty([self.env.T + 1, self.env.S, self.env.A])
-            Z = torch.eye(self.env.S).tile(self.env.A)
-            W_0 = self.env.P(0, d[0]).permute(2, 0, 1)
-            err[0] = W_0.T @ y[0] + Z.T @ y[self.env.T + 1]
-            for t in range(1, self.env.T + 1):
-                c_t = -self.env.r(t, d[t])
-                W_t = self.env.P(t, d[t]).permute(2, 0, 1)
-                err[t] = -Z.T @ y[t - 1] + W_t.T @ y[t] + z[t] - c_t
+            T = self.env.T
+            n_states = self.env.n_states
+            n_actions = self.env.n_actions
+            err = torch.empty(T + 1, n_states, n_actions, dtype=torch.float)
+            Z = torch.eye(n_states).unsqueeze(dim=1).repeat(1, n_actions, 1)
+            c_0 = -self.env.reward(0, d[0])
+            P_0 = self.env.prob(0, d[0])
+            term_1 = torch.einsum("saj,j->sa", P_0, y[0])
+            term_2 = torch.einsum("saj,j->sa", Z, y[T])
+            err[0] = term_1 + term_2 + z[0] - c_0
+            for t in range(1, T):
+                c_t = -self.env.reward(t, d[t])
+                P_t = self.env.prob(t, d[t])
+                term_1 = torch.einsum("saj,j->sa", -Z, y[t - 1])
+                term_2 = torch.einsum("saj,j->sa", P_t, y[t])
+                err[t] = term_1 + term_2 + z[t] - c_t
+            c_T = -self.env.reward(T, d[T])
+            term_1 = torch.einsum("saj,j->sa", -Z, y[T - 1])
+            err[T] = term_1 + z[T] - c_T
             return err.square().sum()
 
     def __init__(self, w: float, rho: tuple[float, float]) -> None:
@@ -92,53 +84,75 @@ class MESOB:
     def solve(
         self,
         env: Environment,
-        social_weights: list[float] | None = None,
-        social_metrics: list[Callable[[torch.Tensor], float]] | None = None,
+        social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """TODO -- what is the best way to specify social metrics and weights?"""
-        social_weights = social_weights or []
-        social_metrics = social_metrics or []
+        if social_reward is None:
+            social_reward = lambda _: 0.0
         kwargs = kwargs or {}
 
-        # Initialize according to kwargs, falling back to default initialization
-        d = kwargs.pop("d0", torch.ones([env.T + 1, env.S, env.A]) / env.A)
-        y = kwargs.pop("y0", torch.zeros([env.T + 1, env.S]))
-        z = kwargs.pop("z0", torch.zeros([env.T + 1, env.S, env.A]))
+        T = env.T
+        n_states = env.n_states
+        n_actions = env.n_actions
+        r_max = env.r_max
+
+        default_d0 = torch.ones(T + 1, n_states, n_actions) / n_actions
+        default_y0 = torch.zeros(T + 1, n_states)
+        default_z0 = torch.zeros(T + 1, n_states, n_actions)
+
+        d = kwargs.pop("d0", default_d0)
+        y = kwargs.pop("y0", default_y0)
+        z = kwargs.pop("z0", default_z0)
 
         d.requires_grad_(True)
         y.requires_grad_(True)
         z.requires_grad_(True)
 
-        obj = self.Objective(env, social_weights, social_metrics, self.w, self.rho)
+        obj = self.Objective(env, social_reward, self.w, self.rho)
 
         opt_cls = kwargs.pop("opt_cls", torch.optim.Adam)
         opt_kwargs = kwargs.pop("opt_kwargs", {})
         opt = opt_cls([d, y, z], **opt_kwargs)
 
-        y_radius = env.S * (env.T + 1) * (env.T + 2) * env.r_max / 2
-        z_radius = env.S * env.A * (env.T * env.T + env.T + 2) * env.r_max
+        y_radius = n_states * (T + 1) * (T + 2) * r_max / 2
+        z_radius = n_states * n_actions * (T**2 + T + 2) * r_max
 
-        solns = torch.empty([max_iter, env.T + 1, env.S, env.A])
+        pis = torch.empty(max_iter + 1, T + 1, n_states, n_actions, dtype=torch.float)
+        expls = torch.empty(max_iter + 1, dtype=torch.float)
+        obj_vals = torch.empty(max_iter + 1, dtype=torch.float)
 
         for i in range(max_iter):
-            opt.zero_grad()
             obj_val = obj(d, y, z)
+
+            pi = d / d.sum(dim=-1, keepdim=True)
+            pi = pi.nan_to_num(nan=1 / n_actions)
+
+            pis[i] = pi.data.clone()
+            expls[i] = exploitability_score(env, pi)
+            obj_vals[i] = obj_val.data.clone()
+
+            opt.zero_grad()
             obj_val.backward()
             opt.step()
 
-            with torch.no_grad():
-                d = project_simplex(d, axis=0)
-                y = project_l2_ball(y, r=y_radius)
-                z = project_Z_set(z, r=z_radius)
+            d.data = project_simplex(d.data, axis=0)
+            y.data = project_l2_ball(y.data, r=y_radius)
+            z.data = project_Z_set(z.data, r=z_radius)
 
-                solns[i] = d.clone()
+        obj_val = obj(d, y, z)
 
-        return solns
+        pi = d / d.sum(dim=-1, keepdim=True)
+        pi = pi.nan_to_num(nan=1 / n_actions)
+
+        pis[max_iter] = pi.data.clone()
+        expls[max_iter] = exploitability_score(env, pi)
+        obj_vals[max_iter] = obj_val.data.clone()
+
+        return pis, expls, obj_vals
 
 
-@torch.no_grad()
 def project_simplex(v: torch.Tensor, r: float = 1.0, axis: int = -1) -> torch.Tensor:
     """TODO.
 
@@ -167,9 +181,9 @@ def project_simplex(v: torch.Tensor, r: float = 1.0, axis: int = -1) -> torch.Te
         mu = torch.sort(v_2d, dim=1, descending=True)[0]
         cumsum = torch.cumsum(mu, dim=1)
         j = torch.arange(1, N + 1).repeat(M, 1)
-        rho = torch.sum(mu * j - cumsum + r > 0.0, dim=1)
-        theta = (cumsum[:, rho - 1] - r) / rho
-        return torch.clamp(v - theta, min=0.0)
+        rho = torch.sum(mu * j - cumsum + r > 0.0, dim=1, keepdim=True) - 1
+        theta = (cumsum.gather(1, rho) - r) / (rho + 1)
+        return torch.clamp(v_2d - theta, min=0.0)
 
     shape = v.shape
 
@@ -180,24 +194,22 @@ def project_simplex(v: torch.Tensor, r: float = 1.0, axis: int = -1) -> torch.Te
         axis = axis % len(shape)
         v_2d = v.movedim(axis, 0).flatten(start_dim=1)
         w_2d = project_simplex_2d(v_2d)
-        w_2d = w_2d.reshape([shape[axis], *shape[1:axis], shape[0], *shape[axis:]])
+        w_2d = w_2d.reshape([shape[axis], *shape[1:axis], *shape[axis + 1 :]])
         return w_2d.movedim(axis, 0)
 
 
-@torch.no_grad()
 def project_l2_ball(v: torch.Tensor, *, r: float = 1.0) -> torch.Tensor:
-    return v * min(1, 1 / v.norm(p="fro")) * r
+    v_norm = v.norm()
+    if v_norm <= r:
+        return v
+    else:
+        return v / v_norm * r
 
 
-@torch.no_grad()
 def project_Z_set(z: torch.Tensor, *, r: float) -> torch.Tensor:
     """TODO -- is this supposed to be a real projection?"""
-    if (z >= 0).all() and z.sum() <= r:
-        return z
-    else:
-        z_ravel = z.ravel()
-        p_ind = torch.argwhere(z_ravel < 0)
-        np_ind = torch.argwhere(z_ravel >= 0)
-        z_ravel[p_ind] = project_simplex(z_ravel[p_ind], r=r)
-        z_ravel[np_ind] = 0.0
-        return z_ravel.reshape(z.shape)
+    z_ravel = z.ravel()
+    z_clamp = z_ravel.clamp(min=0)
+    if z_clamp.sum() > r:
+        z_clamp = project_simplex(z_clamp, r=r)
+    return z_clamp.reshape(z.shape)

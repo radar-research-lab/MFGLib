@@ -72,6 +72,14 @@ class Environment:
     def prob(self, t: int, L_t: torch.Tensor) -> torch.Tensor:
         return self.transition_fn(self, t, L_t)
 
+    @property
+    def n_states(self) -> int:
+        return math.prod(self.S)
+
+    @property
+    def n_actions(self) -> int:
+        return math.prod(self.A)
+
     @classmethod
     def beach_bar(
         cls,
@@ -399,9 +407,7 @@ class Environment:
         )
 
     @classmethod
-    def susceptible_infected(
-        cls, T: int = 50, mu0: tuple[float, float] = (0.4, 0.6)
-    ) -> Environment:
+    def SIS(cls, T: int = 50, mu0: tuple[float, float] = (0.4, 0.6)) -> Environment:
         """SIS environment.
 
         In this problem, a large number of agents can choose between social

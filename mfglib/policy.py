@@ -22,7 +22,7 @@ def _uniform(environment: Environment, **kwargs: Any) -> torch.Tensor:
 
 def _greedy(environment: Environment, L: torch.Tensor) -> torch.Tensor:
     """Greedy policy constructor, for internal use only."""
-    from mfglib.alg.q_fn import QFn
+    from mfglib.q_fn import QFn
 
     T, S, A = environment.T, environment.S, environment.A
 

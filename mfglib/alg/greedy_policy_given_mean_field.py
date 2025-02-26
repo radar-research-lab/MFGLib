@@ -1,7 +1,7 @@
 import torch
 
-from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
+from mfglib.q_fn import QFn
 
 
 def Greedy_Policy(env_instance: Environment, L: torch.Tensor) -> torch.Tensor:

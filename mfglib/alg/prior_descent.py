@@ -7,7 +7,6 @@ import optuna
 import torch
 
 from mfglib.alg.abc import Algorithm
-from mfglib.alg.q_fn import QFn
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _print_fancy_header,
@@ -18,6 +17,7 @@ from mfglib.alg.utils import (
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.metrics import exploitability_score
+from mfglib.q_fn import QFn
 
 
 class PriorDescent(Algorithm):
