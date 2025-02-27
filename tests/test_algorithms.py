@@ -16,6 +16,7 @@ from mfglib.alg import (
 )
 from mfglib.alg.abc import Algorithm
 from mfglib.env import Environment
+from mfglib.tuning import FailureRate, GeometricMean
 
 
 def _assert_lr_solved(
@@ -102,23 +103,29 @@ def test_mf_omo_on_lr(
 def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> None:
     rps = Environment.rock_paper_scissors()
 
-    alg.tune_on_failure_rate(
+    alg.tune(
         envs=[rps],
-        stat=stat,
-        fail_thresh=100,
-        max_iter=500,
-        atol=0,
-        rtol=1e-1,
+        pi0s="uniform",
+        metric=FailureRate(fail_thresh=100, stat=stat),
+        solve_kwargs={"max_iter": 200},
         n_trials=5,
         timeout=20,
     )
-    alg.tune_on_geometric_mean(
+    # NOTE: fail_thresh is not required when stat == "rt"
+    if stat != "rt":
+        alg.tune(
+            envs=[rps],
+            pi0s="uniform",
+            metric=FailureRate(stat=stat),
+            solve_kwargs={"max_iter": 200},
+            n_trials=5,
+            timeout=20,
+        )
+    alg.tune(
         envs=[rps],
-        stat=stat,
-        shift=10,
-        max_iter=500,
-        atol=0,
-        rtol=1e-1,
+        pi0s="uniform",
+        metric=GeometricMean(shift=1.0, stat=stat),
+        solve_kwargs={"max_iter": 200},
         n_trials=5,
         timeout=20,
     )
