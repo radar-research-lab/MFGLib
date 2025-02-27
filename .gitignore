@@ -11,3 +11,6 @@ poetry.toml
 docs/build
 docs/jupyter_execute
 .coverage
+
+!MESOB.ipynb
+nbs/*
