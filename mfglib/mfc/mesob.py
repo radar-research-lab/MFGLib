@@ -26,21 +26,21 @@ class MESOB:
             self,
             env: Environment,
             social_reward: Callable[[torch.Tensor], float],
-            w: float,
+            ell: tuple[float, float],
             rho: tuple[float, float],
         ) -> None:
             super().__init__()
             self.env = env
             self.social_reward = social_reward
-            self.w = w
+            self.ell = ell
             self.rho = rho
 
         def forward(
             self, d: torch.Tensor, y: torch.Tensor, z: torch.Tensor
         ) -> torch.Tensor:
             return (
-                -self.social_reward(d)
-                + self.w * torch.einsum("tsa,tsa->", z, d)
+                -self.ell[0] * self.social_reward(d)
+                + self.ell[1] * torch.einsum("tsa,tsa->", z, d)
                 + self.rho[0] * self.g(d)
                 + self.rho[1] * self.h(y, z, d)
             )
@@ -49,7 +49,7 @@ class MESOB:
             err = torch.empty(self.env.T + 1, self.env.n_states, dtype=torch.float)
             for t in range(self.env.T):
                 P_t = self.env.prob(t, d[t])
-                term_1 = torch.einsum("saj,sa->j", P_t, d[t])
+                term_1 = torch.einsum("jsa,sa->j", P_t, d[t])
                 term_2 = torch.einsum("ja->j", d[t + 1])
                 err[t] = term_1 - term_2
             err[self.env.T] = torch.einsum("sa->s", d[0]) - self.env.mu0
@@ -63,22 +63,22 @@ class MESOB:
             Z = torch.eye(n_states).unsqueeze(dim=1).repeat(1, n_actions, 1)
             c_0 = -self.env.reward(0, d[0])
             P_0 = self.env.prob(0, d[0])
-            term_1 = torch.einsum("saj,j->sa", P_0, y[0])
+            term_1 = torch.einsum("jsa,j->sa", P_0, y[0])
             term_2 = torch.einsum("saj,j->sa", Z, y[T])
             err[0] = term_1 + term_2 + z[0] - c_0
             for t in range(1, T):
                 c_t = -self.env.reward(t, d[t])
                 P_t = self.env.prob(t, d[t])
                 term_1 = torch.einsum("saj,j->sa", -Z, y[t - 1])
-                term_2 = torch.einsum("saj,j->sa", P_t, y[t])
+                term_2 = torch.einsum("jsa,j->sa", P_t, y[t])
                 err[t] = term_1 + term_2 + z[t] - c_t
             c_T = -self.env.reward(T, d[T])
             term_1 = torch.einsum("saj,j->sa", -Z, y[T - 1])
             err[T] = term_1 + z[T] - c_T
             return err.square().sum()
 
-    def __init__(self, w: float, rho: tuple[float, float]) -> None:
-        self.w = w
+    def __init__(self, ell: tuple[float, float], rho: tuple[float, float]) -> None:
+        self.ell = ell
         self.rho = rho
 
     def solve(
@@ -98,7 +98,7 @@ class MESOB:
         n_actions = env.n_actions
         r_max = env.r_max
 
-        default_d0 = torch.ones(T + 1, n_states, n_actions) / n_actions
+        default_d0 = torch.ones(T + 1, n_states, n_actions) / n_states / n_actions
         default_y0 = torch.zeros(T + 1, n_states)
         default_z0 = torch.zeros(T + 1, n_states, n_actions)
 
@@ -110,7 +110,7 @@ class MESOB:
         y.requires_grad_(True)
         z.requires_grad_(True)
 
-        obj = self.Objective(env, social_reward, self.w, self.rho)
+        obj = self.Objective(env, social_reward, self.ell, self.rho)
 
         opt_cls = kwargs.pop("opt_cls", torch.optim.Adam)
         opt_kwargs = kwargs.pop("opt_kwargs", {})

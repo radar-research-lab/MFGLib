@@ -357,19 +357,6 @@ class MFOMO(Algorithm):
         runtimes = [0.0]
         obj_vals = torch.empty(max_iter + 1, dtype=torch.float)
 
-        obj = mf_omo_obj(
-            env_instance,
-            L_u_tensor,
-            z_v_tensor,
-            y_w_tensor,
-            self.loss,
-            c1,
-            c2,
-            self.c3,
-            self.parameterize,
-        )
-        obj_vals[0] = obj.data.clone()
-
         if verbose:
             _print_fancy_header(
                 alg_instance=self,
@@ -421,7 +408,7 @@ class MFOMO(Algorithm):
                 self.c3,
                 self.parameterize,
             )
-            obj_vals[n] = obj.data.clone()
+            obj_vals[n - 1] = obj.data.clone()
 
             # Compute the gradients, update the params, and aply the constraints
             optimizer_instance.zero_grad()
@@ -471,6 +458,19 @@ class MFOMO(Algorithm):
 
         if verbose:
             _print_solve_complete(seconds_elapsed=time.time() - t)
+
+        obj = mf_omo_obj(
+            env_instance,
+            L_u_tensor,
+            z_v_tensor,
+            y_w_tensor,
+            self.loss,
+            c1,
+            c2,
+            self.c3,
+            self.parameterize,
+        )
+        obj_vals[max_iter] = obj.data.clone()
 
         return solutions, scores, obj_vals
 
