@@ -21,8 +21,13 @@ class TransitionFn:
 
 class RewardFn:
     def __init__(self, n: int, bar_loc: int, log_eps: float) -> None:
-        self.c1 = torch.abs(
-            torch.arange(0, n).repeat(3, 1).T - bar_loc * torch.ones(n, 3)
+        self.c1 = (
+            -torch.min(
+                torch.arange(n).roll(bar_loc),
+                torch.arange(n).flip(dims=[0]).roll(bar_loc + 1),
+            )
+            .unsqueeze(dim=1)
+            .broadcast_to(size=[n, 3])
         )
         self.c2 = -torch.tensor([1, 0, 1]).repeat(n, 1) / n
         self.log_eps = log_eps
