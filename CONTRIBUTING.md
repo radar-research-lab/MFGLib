@@ -30,3 +30,23 @@ To ensure that the documentation build successfully (with no errors), run
 ```shell
 sphinx-build -EW docs/source docs/build
 ```
+
+## CHANGELOG
+
+Any pull request that makes a significant change to `MFGLib` should include a new entry in `MFGLib/changelog.d/`.
+To generate a new entry, run the command
+
+```shell
+$ towncrier create -c "{description of the change}" {issue}.{type}.md
+```
+
+If your change corresponds with a GitHub issue, replace `{issue}` with the issue number. If there
+is no corresponding GitHub issue, replace `{issue}` with a unique identifier starting with `+`. The 
+`{type}` placeholder should be replaced by one of
+
+- `security`
+- `removed`
+- `deprecated`
+- `added`
+- `changed`
+- `fixed`
