@@ -2,9 +2,9 @@ import pytest
 import torch
 from torch.testing import assert_close
 
-from mfglib.alg.q_fn import QFn
 from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
+from mfglib.q_fn import QFn
 
 
 @pytest.mark.parametrize(
