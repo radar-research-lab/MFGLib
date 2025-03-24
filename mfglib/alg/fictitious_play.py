@@ -6,7 +6,7 @@ from typing import Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import Algorithm
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.greedy_policy_given_mean_field import Greedy_Policy
 from mfglib.alg.utils import (
     _ensure_free_tensor,
@@ -18,7 +18,7 @@ from mfglib.alg.utils import (
 )
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.metrics import exploitability_score
+from mfglib.scoring import exploitability_score
 
 
 class FictitiousPlay(Algorithm):
@@ -67,9 +67,9 @@ class FictitiousPlay(Algorithm):
         env_instance: Environment,
         *,
         pi: Literal["uniform"] | torch.Tensor = "uniform",
-        max_iter: int = 100,
-        atol: float | None = 1e-3,
-        rtol: float | None = 1e-3,
+        max_iter: int = DEFAULT_MAX_ITER,
+        atol: float | None = DEFAULT_ATOL,
+        rtol: float | None = DEFAULT_RTOL,
         verbose: bool = False,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.

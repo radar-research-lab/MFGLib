@@ -27,7 +27,7 @@ all major platforms:
 
    $ pip install mfglib
 
-Additionally, the source code is directly available on `GitHub <https://github.com/junziz/MFGLib>`_.
+Additionally, the source code is directly available on `GitHub <https://github.com/radar-research-lab/MFGLib>`_.
 
 Your First MFG
 --------------

@@ -23,12 +23,11 @@ extensions = [
     "matplotlib.sphinxext.plot_directive",
 ]
 napoleon_google_docstring = False
-napoleon_numpy_docstring = True
 autosectionlabel_prefix_document = True
 bibtex_bibfiles = ["refs.bib"]
 
-add_module_names = False
-autodoc_class_signature = "separated"
+# Disable download links for plot images
+plot_html_show_formats = False
 
 exclude_patterns = []
 
