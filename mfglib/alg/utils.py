@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Literal, TypeVar
 import torch
 
 from mfglib import __version__
-from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
+from mfglib.q_fn import QFn
 
 if TYPE_CHECKING:
     from mfglib.alg.abc import Algorithm

@@ -355,6 +355,7 @@ class MFOMO(Algorithm):
         argmin = 0
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
+        obj_vals = torch.empty(max_iter + 1, dtype=torch.float)
 
         if verbose:
             _print_fancy_header(
@@ -407,6 +408,7 @@ class MFOMO(Algorithm):
                 self.c3,
                 self.parameterize,
             )
+            obj_vals[n - 1] = obj.data.clone()
 
             # Compute the gradients, update the params, and aply the constraints
             optimizer_instance.zero_grad()
@@ -457,7 +459,20 @@ class MFOMO(Algorithm):
         if verbose:
             _print_solve_complete(seconds_elapsed=time.time() - t)
 
-        return solutions, scores, runtimes
+        obj = mf_omo_obj(
+            env_instance,
+            L_u_tensor,
+            z_v_tensor,
+            y_w_tensor,
+            self.loss,
+            c1,
+            c2,
+            self.c3,
+            self.parameterize,
+        )
+        obj_vals[max_iter] = obj.data.clone()
+
+        return solutions, scores, obj_vals
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
