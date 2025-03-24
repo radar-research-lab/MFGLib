@@ -26,11 +26,10 @@ class TransitionFn:
 
 class RewardFn:
     def __init__(self) -> None:
-        # NOTE:
-        #         a = U, a = D
-        #  s = S  [-1.0, -1.5]
-        #  s = I  [ 0.0, -0.5]
-        self.r = torch.tensor([[-1.0, -1.5], [0.0, -0.5]])
+        self.r = torch.zeros(2, 2)
+        self.r[0, 1] = -0.5
+        self.r[1, 0] = -1.0
+        self.r[1, 1] = -1.5
 
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
         return self.r
