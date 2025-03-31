@@ -12,10 +12,8 @@ from scipy import sparse
 from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import (
+    Printer,
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
 )
@@ -92,7 +90,7 @@ class OccupationMeasureInclusion(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
 
@@ -119,25 +117,25 @@ class OccupationMeasureInclusion(Algorithm):
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        printer = Printer(verbose=verbose)
+        printer.print_info_panels(
+            env_instance=env_instance,
+            cls="MF-OMI-FBS",
+            parameters={"alpha": self.alpha, "eta": self.eta},
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+        )
+        printer.add_table_row(
+            n=0,
+            expl_n=scores[0],
+            expl_0=scores[0],
+            argmin=argmin,
+            runtime_n=runtimes[0],
+        )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
+            printer.alert_stopped_early()
             return solutions, scores, runtimes
 
         # initialize d = L^pi
@@ -162,22 +160,19 @@ class OccupationMeasureInclusion(Algorithm):
                 argmin = n
             runtimes.append(time.time() - t)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            printer.add_table_row(
+                n=n,
+                expl_n=scores[n],
+                expl_0=scores[0],
+                argmin=argmin,
+                runtime_n=runtimes[n],
+            )
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
+                printer.alert_stopped_early()
                 return solutions, scores, runtimes
 
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
+        printer.alert_iterations_exhausted()
 
         return solutions, scores, runtimes
 

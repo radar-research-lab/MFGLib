@@ -13,10 +13,8 @@ from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
 from mfglib.alg.utils import (
+    Printer,
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
     hat_initialization,
@@ -270,7 +268,7 @@ class MFOMO(Algorithm):
         return (
             f"MFOMO(loss={self.loss}, c1={self.c1}, c2={self.c2}, c3={self.c3}, "
             f"rb_freq={self.rb_freq}, m1={self.m1}, m2={self.m2}, m3={self.m3}, "
-            f"parameterize={self.parameterize})"
+            f"parameterize={self.parameterize}, hat_init={self.hat_init})"
         )
 
     def solve(
@@ -281,7 +279,7 @@ class MFOMO(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Mean-Field Occupation Measure Optimization algorithm.
 
@@ -356,25 +354,36 @@ class MFOMO(Algorithm):
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        printer = Printer(verbose=verbose)
+        printer.print_info_panels(
+            env_instance=env_instance,
+            cls="MF-OMO",
+            parameters={
+                "loss": self.loss,
+                "c1": self.c1,
+                "c2": self.c2,
+                "c3": self.c3,
+                "rb_freq": self.rb_freq,
+                "m1": self.m1,
+                "m2": self.m2,
+                "m3": self.m3,
+                "parameterize": self.parameterize,
+                "hat_init": self.hat_init,
+            },
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+        )
+        printer.add_table_row(
+            n=0,
+            expl_n=scores[0],
+            expl_0=scores[0],
+            argmin=argmin,
+            runtime_n=runtimes[0],
+        )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
+            printer.alert_stopped_early()
             return solutions, scores, runtimes
 
         t = time.time()
@@ -440,22 +449,19 @@ class MFOMO(Algorithm):
                 argmin = n
             runtimes.append(time.time() - t)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            printer.add_table_row(
+                n=n,
+                expl_n=scores[n],
+                expl_0=scores[0],
+                argmin=argmin,
+                runtime_n=runtimes[n],
+            )
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
+                printer.alert_stopped_early()
                 return solutions, scores, runtimes
 
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
+        printer.alert_iterations_exhausted()
 
         return solutions, scores, runtimes
 

@@ -5,13 +5,16 @@ from functools import reduce
 from typing import TYPE_CHECKING, Literal, TypeVar
 
 import torch
+from rich import box
+from rich.console import Console, Group
+from rich.panel import Panel
+from rich.pretty import Pretty, pretty_repr
+from rich.table import Table
+from rich.text import Text
 
 from mfglib import __version__
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
-
-if TYPE_CHECKING:
-    from mfglib.alg.abc import Algorithm
 
 T = TypeVar("T", int, float)
 
@@ -21,53 +24,112 @@ def tuple_prod(tup: tuple[T, ...]) -> T:
     return reduce(lambda x, y: x * y, tup)
 
 
-HEADER = "| iter |  expl_n  | expl_n / expl_0 | argmin_{0..n} expl_i | time (s) |"
-
-
-def _print_fancy_header(
-    *,
-    alg_instance: Algorithm,
-    env_instance: Environment,
-    max_iter: int,
-    atol: float | None,
-    rtol: float | None,
-) -> None:
-    title = f"MFGLib v{__version__} : A Library for Mean-Field Games"
-    print("=" * len(HEADER))
-    print(f"{title:^{len(HEADER)}}")
-    print(f"{'(c) RADAR Research Lab, UC Berkeley':^{len(HEADER)}}")
-    print("=" * len(HEADER))
-    print()
-    print("Environment summary:")
-    print(f"\tS={env_instance.S}")
-    print(f"\tA{env_instance.A}")
-    print(f"\tT={env_instance.T}")
-    print(f"\tr_max={env_instance.r_max}")
-    print()
-    print("Algorithm summary:")
-    print(f"\t{alg_instance}")
-    print(f"\t{atol=}")
-    print(f"\t{rtol=}")
-    print(f"\t{max_iter=}")
-    print()
-    print("-" * len(HEADER))
-    print(HEADER)
-    print("-" * len(HEADER))
-
-
-def _print_fancy_table_row(
-    *, n: int, score_n: float, score_0: float, argmin: int, runtime_n: float
-) -> None:
-    print(
-        f"|{n:^6}|{score_n:^10.5f}|{score_n / score_0:^17.5f}"
-        f"|{argmin:^22}|{runtime_n:^10.3f}|"
+def new_table() -> Table:
+    return Table(
+        "Iter (n)",
+        "Expl_n",
+        "Ratio_n",
+        "Argmin_n",
+        "Elapsed_n",
     )
 
 
-def _print_solve_complete(*, seconds_elapsed: float) -> None:
-    print("-" * len(HEADER))
-    print()
-    print(f"Solve complete ({seconds_elapsed:.3f} seconds)")
+class Printer:
+
+    WIDTH = 61
+
+    def __init__(self, verbose: int) -> None:
+        self.verbose = verbose
+        self.console = Console()
+        self.table = new_table()
+
+    def print_info_panels(
+        self,
+        env_instance: Environment,
+        cls: str,
+        parameters: dict[str, float | str | None | int],
+        atol: float | None,
+        rtol: float | None,
+        max_iter: int | None,
+    ) -> None:
+        if self.verbose > 0:
+            top_group = Group(
+                Text(
+                    f"MFGLib v{__version__} : A Library for Mean-Field Games",
+                    justify="center",
+                    style="bold",
+                ),
+                Text("RADAR Research Lab, UC Berkeley", justify="center"),
+            )
+            top_panel = Panel(top_group, box=box.HEAVY, width=self.WIDTH, padding=1)
+
+            env_group = Group(
+                f"S = {env_instance.S}",
+                f"A = {env_instance.A}",
+                f"T = {env_instance.T}",
+                f"r_max = {env_instance.r_max}",
+            )
+            env_panel = Panel(
+                env_group,
+                title=Text("Environment Summary", style="bold"),
+                width=self.WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+
+            alg_group = Group(
+                f"class = {cls}",
+                f"parameters = {pretty_repr(parameters)}",
+                f"atol = {atol}",
+                f"rtol = {rtol}",
+                f"max_iter = {max_iter}",
+            )
+            alg_panel = Panel(
+                alg_group,
+                title=Text("Algorithm Summary", style="bold"),
+                width=self.WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+
+            doc_group = Group(
+                f"- The verbosity level is set to {self.verbose}.",
+                "- Table output is printed 50 rows at a time.",
+                "- Ratio_n := Expl_n / Expl_0.",
+                "- Argmin_n := Argmin_{0≤i≤n} Expl_i.",
+                "- Elapsed_n measures time in seconds.",
+            )
+            doc_panel = Panel(
+                doc_group,
+                title=Text("Documentation", style="bold"),
+                width=self.WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+            self.console.print(top_panel, env_panel, alg_panel, doc_panel)
+
+    def add_table_row(
+        self, n: int, expl_n: float, expl_0: float, argmin: int, runtime_n: float
+    ) -> None:
+        if self.verbose > 0 and n % self.verbose == 0:
+            self.table.add_row(
+                f"{n}",
+                f"{expl_n:.4e}",
+                f"{expl_n / expl_0:.4e}",
+                f"{argmin}",
+                f"{runtime_n:.2e}",
+            )
+            if len(self.table.rows) == 50:
+                self.console.print(self.table)
+                self.table = new_table()
+
+    def alert_stopped_early(self) -> None:
+        self.console.print(self.table)
+        self.console.print("Absolute or relative stopping criteria met.")
+
+    def alert_iterations_exhausted(self) -> None:
+        self.console.print(self.table)
+        self.console.print("Number of iterations exhausted.")
 
 
 def _ensure_free_tensor(

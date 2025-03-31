@@ -42,7 +42,7 @@ class Algorithm(abc.ABC):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy."""
         raise NotImplementedError
