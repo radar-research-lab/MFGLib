@@ -82,29 +82,22 @@ class OnlineMirrorDescent(Algorithm):
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
-        argmin = 0
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        printer = Printer(verbose=verbose)
-        printer.print_info_panels(
+        printer = Printer.setup(
+            verbose=verbose,
             env_instance=env_instance,
-            cls="OnlineMirrorDescent",
+            solver="OnlineMirrorDescent",
             parameters={"alpha": self.alpha},
             atol=atol,
             rtol=rtol,
             max_iter=max_iter,
-        )
-        printer.add_table_row(
-            n=0,
-            expl_n=scores[0],
             expl_0=scores[0],
-            argmin=argmin,
-            runtime_n=runtimes[0],
         )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            printer.alert_stopped_early()
+            printer.alert_early_stopping()
             return solutions, scores, runtimes
 
         t = time.time()
@@ -124,24 +117,15 @@ class OnlineMirrorDescent(Algorithm):
 
             solutions.append(pi.clone().detach())
             scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
             runtimes.append(time.time() - t)
 
-            printer.add_table_row(
-                n=n,
-                expl_n=scores[n],
-                expl_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[n],
-            )
+            printer.notify_of_solution(n=n, expl_n=scores[n], runtime_n=runtimes[n])
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                printer.alert_stopped_early()
+                printer.alert_early_stopping()
                 return solutions, scores, runtimes
 
         printer.alert_iterations_exhausted()
-
         return solutions, scores, runtimes
 
     @classmethod

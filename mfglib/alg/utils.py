@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import Literal, TypeVar
 
 import torch
 from rich import box
-from rich.console import Console, Group
+from rich import print as rich_print
+from rich.console import Group
 from rich.panel import Panel
-from rich.pretty import Pretty, pretty_repr
+from rich.pretty import pretty_repr
 from rich.table import Table
 from rich.text import Text
+from typing_extensions import Self
 
 from mfglib import __version__
 from mfglib.alg.q_fn import QFn
@@ -24,7 +26,7 @@ def tuple_prod(tup: tuple[T, ...]) -> T:
     return reduce(lambda x, y: x * y, tup)
 
 
-def new_table() -> Table:
+def _new_table() -> Table:
     return Table(
         "Iter (n)",
         "Expl_n",
@@ -38,19 +40,41 @@ class Printer:
 
     WIDTH = 61
 
-    def __init__(self, verbose: int) -> None:
+    def __init__(self, verbose: int, expl_0: float) -> None:
         self.verbose = verbose
-        self.console = Console()
-        self.table = new_table()
+        self.argmin = 0
+        self.expl_argmin = expl_0
+        self.expl_0 = expl_0
+
+        self.table = _new_table()
+
+    @classmethod
+    def setup(
+        cls,
+        verbose: int,
+        env_instance: Environment,
+        solver: str,
+        parameters: dict[str, float | str | None | int],
+        atol: float | None,
+        rtol: float | None,
+        max_iter: int,
+        expl_0: float,
+    ) -> Self:
+        printer = cls(verbose, expl_0)
+        printer.print_info_panels(
+            env_instance, solver, parameters, atol, rtol, max_iter
+        )
+        printer.notify_of_solution(n=0, expl_n=expl_0, runtime_n=0.0)
+        return printer
 
     def print_info_panels(
         self,
         env_instance: Environment,
-        cls: str,
+        solver: str,
         parameters: dict[str, float | str | None | int],
         atol: float | None,
         rtol: float | None,
-        max_iter: int | None,
+        max_iter: int,
     ) -> None:
         if self.verbose > 0:
             top_group = Group(
@@ -78,7 +102,7 @@ class Printer:
             )
 
             alg_group = Group(
-                f"class = {cls}",
+                f"class = {solver}",
                 f"parameters = {pretty_repr(parameters)}",
                 f"atol = {atol}",
                 f"rtol = {rtol}",
@@ -106,30 +130,32 @@ class Printer:
                 title_align="left",
                 box=box.SQUARE,
             )
-            self.console.print(top_panel, env_panel, alg_panel, doc_panel)
+            rich_print(top_panel, env_panel, alg_panel, doc_panel)
 
-    def add_table_row(
-        self, n: int, expl_n: float, expl_0: float, argmin: int, runtime_n: float
-    ) -> None:
+    def notify_of_solution(self, n: int, expl_n: float, runtime_n: float) -> None:
+        if expl_n < self.expl_argmin:
+            self.argmin = n
+            self.expl_argmin = expl_n
+
         if self.verbose > 0 and n % self.verbose == 0:
             self.table.add_row(
                 f"{n}",
                 f"{expl_n:.4e}",
-                f"{expl_n / expl_0:.4e}",
-                f"{argmin}",
+                f"{expl_n / self.expl_0:.4e}",
+                f"{self.argmin}",
                 f"{runtime_n:.2e}",
             )
             if len(self.table.rows) == 50:
-                self.console.print(self.table)
-                self.table = new_table()
+                rich_print(self.table)
+                self.table = _new_table()
 
-    def alert_stopped_early(self) -> None:
-        self.console.print(self.table)
-        self.console.print("Absolute or relative stopping criteria met.")
+    def alert_early_stopping(self) -> None:
+        rich_print(self.table)
+        rich_print("Absolute or relative stopping criteria met.")
 
     def alert_iterations_exhausted(self) -> None:
-        self.console.print(self.table)
-        self.console.print("Number of iterations exhausted.")
+        rich_print(self.table)
+        rich_print("Number of iterations exhausted.")
 
 
 def _ensure_free_tensor(
