@@ -150,12 +150,14 @@ class Printer:
                 self.table = _new_table()
 
     def alert_early_stopping(self) -> None:
-        rich_print(self.table)
-        rich_print("Absolute or relative stopping criteria met.")
+        if self.verbose > 0:
+            rich_print(self.table)
+            rich_print("Absolute or relative stopping criteria met.")
 
     def alert_iterations_exhausted(self) -> None:
-        rich_print(self.table)
-        rich_print("Number of iterations exhausted.")
+        if self.verbose > 0:
+            rich_print(self.table)
+            rich_print("Number of iterations exhausted.")
 
 
 def _ensure_free_tensor(
