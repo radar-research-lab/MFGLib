@@ -7,11 +7,11 @@ Overview
 This library comes with five implemented MFG algorithms:
 
 
-* Fictitious Play (:footcite:t:`perrin2020fictitious`)
-* Online Mirror Descent (:footcite:t:`perolat2021`)
-* Prior Descent (:footcite:t:`pmlr-v130-cui21a`)
-* MF-OMO (:footcite:t:`2022:guo`)
-* MF-OMI-FBS (:footcite:t:`2024:MFOMI`)
+* Fictitious Play -- :cite:t:`perrin2020fictitious`
+* Online Mirror Descent -- :cite:t:`perolat2021`
+* Prior Descent -- :cite:t:`pmlr-v130-cui21a`
+* MF-OMO -- :cite:t:`2022:guo`
+* MF-OMI-FBS -- :cite:t:`2024:MFOMI`
 
 Creating custom algorithms is as simple as subclassing the abstract class ``mfglib.alg.abc.Algorithm``.
 
@@ -21,7 +21,11 @@ In what follows, we provide more information on each of these algorithms. The de
 Fictitious Play
 ^^^^^^^^^^^^^^^
 
-For detailed explanation of the algorithm, you can refer to :footcite:t:`perrin2020fictitious`. The implementation of
+.. note::
+
+    For a complete description, refer to :cite:t:`perrin2020fictitious`.
+
+The implementation of
 **Fictitious Play** in this library is based on **Fictitious Play Damped** introduced in :footcite:t:`perolat2021`.
 The damped version generalizes the original algorithm by adding a learning rate parameter :math:`\alpha`. It is worth mentioning that the
 **Fixed Point Iteration** algorithm is a special case of **Fictitious Play Damped** with :math:`\alpha=1`.
@@ -38,7 +42,9 @@ You can create an instance by importing and instantiating ``FictitiousPlay``. Le
 Online Mirror Descent
 ^^^^^^^^^^^^^^^^^^^^^
 
-You can refer to :footcite:t:`perolat2021` for a detailed explanation.
+.. note::
+
+    For a complete description, refer to :cite:t:`perolat2021`.
 
 **Hyperparameters:**
 
@@ -52,7 +58,9 @@ Let's see how **Online Mirror Descent** performs.
 Prior Descent
 ^^^^^^^^^^^^^
 
-The algorithm is explained in detail by :footcite:t:`pmlr-v130-cui21a`.
+.. note::
+
+    For a complete description, refer to :cite:t:`pmlr-v130-cui21a`.
 
 **Hyperparameters:**
 
@@ -67,8 +75,9 @@ You can create an instance by importing and instantiating ``PriorDescent``. Let'
 MF-OMO
 ^^^^^^
 
-MF-OMO, or Mean-Field Occupation Measure Optimization, is introduced and explained in detail
-in :footcite:t:`2022:guo`.
+.. note::
+
+    For a complete description, refer to :cite:t:`2022:guo`.
 
 **Hyperparameters:**
 
@@ -90,7 +99,11 @@ You can create an instance by importing and instantiating ``MFOMO``. Let's see t
 MF-OMI-FBS
 ^^^^^^^^^^
 
-MF-OMI-FBS, short for Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting, is introduced in :footcite:t:`2024:MFOMI`.
+.. note::
+
+    For a complete description, refer to :cite:t:`2024:MFOMI`.
+
+MF-OMI-FBS, short for Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting.
 
 .. autoclass:: mfglib.alg::OccupationMeasureInclusion
     :no-index:
@@ -117,6 +130,7 @@ MF-OMI-FBS, short for Mean-Field Occupation Measure Inclusion with Forward-Backw
     plt.xlabel("Iteration")
     plt.ylabel("Exploitability")
     plt.title("MF-OMI-FBS on Rock Paper Scissors environment");
+
 
 Tuning
 ------
@@ -305,5 +319,3 @@ We can also apply different norms (L1 or L2) to the objective terms. The followi
 
 References
 ^^^^^^^^^^
-
-.. footbibliography::

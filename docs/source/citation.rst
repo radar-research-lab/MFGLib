@@ -1,5 +1,5 @@
-Citing MFGLib
-=============
+Citation
+========
 
 If you use MFGLib for published work, please consider citing it with
 the following BibTeX entry:
