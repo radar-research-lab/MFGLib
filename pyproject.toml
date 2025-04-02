@@ -21,7 +21,6 @@ optuna = "^3.0"
 osqp = "^0"
 scipy = "^1"
 rich = "^14.0.0"
-notebook = "^7.3.3"
 
 [tool.poetry.group.dev.dependencies]
 isort = "6.0.0"
@@ -40,10 +39,9 @@ sphinx = "7.4.7"
 sphinx-autobuild = "2024.10.03"
 sphinx-copybutton = "0.5.2"
 sphinxcontrib-bibtex = "2.6.3"
-matplotlib = "3.8.4"
-jupyter_sphinx = "0.5.3"
-furo = "2024.8.6"
 nbsphinx = "^0.9.7"
+furo = "2024.8.6"
+matplotlib = "3.8.4"
 
 [tool.isort]
 profile = "black"
