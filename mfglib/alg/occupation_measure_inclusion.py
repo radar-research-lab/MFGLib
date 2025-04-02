@@ -12,10 +12,8 @@ from scipy import sparse
 from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.alg.utils import (
+    Printer,
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
 )
@@ -56,27 +54,32 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
 
 
 class OccupationMeasureInclusion(Algorithm):
-    """Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting.
+    """
+    **MF-OMI**, or Occupation Measure Inclusion, recasts the objective of
+    finding a mean-field Nash equilibrium as an inclusion problem with
+    occupation-measure variables.
 
-    Notes
-    -----
-    MF-OMI-FBS recasts the objective of finding a mean-field Nash equilibrium
-    as an inclusion problem with occupation-measure variables. The algorithm
-    is known to have polynomial regret bounds in games with the Lasry-Lions
-    monotonicity property.
+    The algorithm is known to have polynomial regret bounds in games with the
+    Lasry-Lions monotonicity property.
+
+    Parameters
+    ----------
+    alpha
+        Strictly positive stepsize.
+    eta
+        Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
+        the cost of asymptotic suboptimality.
+
+    References
+    ----------
+
+    .. [#] Hu, Anran, and Junzi Zhang. "MF-OML: Online Mean-Field Reinforcement Learning with
+            Occupation Measures for Large Population Games." arXiv preprint (2024).
+            https://arxiv.org/abs/2405.00282
+
     """
 
     def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
-        """
-
-        Attributes
-        ----------
-        alpha
-            Strictly positive stepsize.
-        eta
-            Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
-            the cost of asymptotic suboptimality.
-        """
         self.alpha = alpha
         self.eta = eta
 
@@ -92,7 +95,7 @@ class OccupationMeasureInclusion(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
 
@@ -115,29 +118,22 @@ class OccupationMeasureInclusion(Algorithm):
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
-        argmin = 0
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        printer = Printer.setup(
+            verbose=verbose,
+            env_instance=env_instance,
+            solver="MF-OMI-FBS",
+            parameters={"alpha": self.alpha, "eta": self.eta},
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+            expl_0=scores[0],
+        )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
+            printer.alert_early_stopping()
             return solutions, scores, runtimes
 
         # initialize d = L^pi
@@ -158,27 +154,15 @@ class OccupationMeasureInclusion(Algorithm):
                 pi.clone().detach()
             )  # do we need to clone + detach again? no? same for MF-OMO？
             scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
             runtimes.append(time.time() - t)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            printer.notify_of_solution(n=n, expl_n=scores[n], runtime_n=runtimes[n])
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
+                printer.alert_early_stopping()
                 return solutions, scores, runtimes
 
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
+        printer.alert_iterations_exhausted()
         return solutions, scores, runtimes
 
     @classmethod

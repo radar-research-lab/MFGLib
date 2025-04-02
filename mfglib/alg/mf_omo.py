@@ -13,10 +13,8 @@ from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
 from mfglib.alg.utils import (
+    Printer,
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
     hat_initialization,
@@ -63,14 +61,123 @@ def _verify(
 
 
 class MFOMO(Algorithm):
-    """Mean-Field Occupation Measure Optimization algorithm.
+    r"""
+    **MF-OMO**, or Mean-Field Occupation Measure Inclusion, reformulates the
+    MFG as an optimization problem.
 
-    Notes
-    -----
-    See [#mf1]_ for algorithm details.
+    In its most basic form **MF-OMO** solves
 
-    .. [#mf1] MF-OMO: An Optimization Formulation of Mean-Field Games
-        Guo, X., Hu, A., & Zhang, J. (2022). arXiv:2206.09608.
+    .. math::
+
+        \text{minimize}_{L, y, z} \quad& \left \lVert A_L L - b \right \rVert_2^2 + \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + z^\top L \\
+        \text{subject to} \quad& \mathbf{1}^\top L_t = 0 \quad \forall t \in \mathcal{T} \\
+        & \mathbf{1}^\top z \leq SA(T^2 + T + 2) r_{\max} \\
+        & \left \lVert y \right \rVert_2 \leq S ( T + 1 ) ( T + 2 ) r_{\max} / 2 \\
+        & L \in \mathbb{R}_+^{\mathcal{T} \mathcal{S} \mathcal{A}} \\
+        & y \in \mathbb{R}^{\mathcal{T} \mathcal{S}} \\
+        & z \in \mathbb{R}^{\mathcal{T} \mathcal{S} \mathcal{A}}
+
+    This constrained optimization problem can be solved with a variety of methods, such
+    as Projected Gradient Descent.
+
+    **Parameterized Formulation.** Replacing the constrained optimization problem with a smooth unconstrained
+    problem enables us to use a broader range of optimization solvers. As explained in Appendix A.3[#], we can
+    reparameterize the variables in **MF-OMO** to completely eliminate the constraints. The new problem is called
+    the “parameterized” formulation. Pass ``parameterize=True`` to use this second formulation.
+
+    **Hat Initialization.** Given an initial mean-field :math:`L`, the "hat initialization" sets the initial
+    :math:`y,z` to :math:`\hat{y}(L), \hat{z}(L)` as explained in Proposition 6[#]. Pass ``hat_init=True`` to
+    enable this option.
+
+    **Redesigned Objective.** One can also assign different coefficients to the
+    three terms in the objective function, and come up with a "redesigned objective"
+
+    .. math::
+
+        c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 z^\top L
+
+    .. note::
+
+        Without loss of generality we can always let :math:`c_1 = 1`.
+
+    You can also apply different norm to the objective terms. The pre-configured options are
+     * ``"l1"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 z^\top L`
+     * ``"l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 ( z^\top L)^2`
+     * ``"l1_l2"`` with objective - ``"l1"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 z^\top L`
+
+    **Adaptive Residual Balancing:** We can adaptively change the coefficients (:math:`c_1`, :math:`c_2`, and :math:`c_3`)
+    of the redesigned objective based on the value of their corresponding objective term. This process is controlled
+    by the three parameters, ``m1``, ``m2``, and ``m3``.
+
+    Let's denote by :math:`O_1` the value of the first objective term (depending on the norm used, it could be either
+    :math:`\left \lVert A_L L-b \right \rVert_1` or :math:`\lVert A_L L-b \rVert_2^2`), and let :math:`O_2` and
+    :math:`O_3` be the values of the second and third objective terms, respectively. When adaptive residual balancing
+    is applied, we modify the coefficients in the following way:
+
+    1. If :math:`O_1/ \max \{ O_2, O_3 \} > m_1`, then multiply ``c1`` by ``m2``.
+    2. If :math:`O_1/ \min \{ O_2, O_3 \} < m_3`, then divide ``c1`` by ``m2``.
+    3. If :math:`O_2/ \max\{ O_1, O_3 \} > m_1`, then multiply ``c2`` by ``m2``.
+    4. If :math:`O_2/ \max\{ O_1, O_3 \} > m_3`, then divide ``c2`` by ``m2``.
+
+    ``rb_freq`` determines how frequently the residual rebalancing is applied.
+
+    **Initialization:** We can set the initial policy for any algorithm using the input argument ``pi`` through the `
+    `solve()`` method.  **MF-OMO** uses the initial policy to compute the initial values of the variables :math:`L`,
+    :math:`z`, and :math:`y`. However, if you want to initialize these variables directly, you can do so by passing
+    the ``L``, ``y``, and ``z`` parameters to the constructor. If you're using the parameterized version, you should
+    instead pass ``u``, ``v``, and ``w``.
+
+    Parameters
+    ----------
+    L
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    z
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    y
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    u
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    v
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    w
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    loss
+        Determines the type of norm used in the objective function.
+    c1
+        Objective function coefficient.
+    c2
+        Objective function coefficient.
+    c3
+        Objective function coefficient.
+    rb_freq
+        Determines how often residual balancing is applied. If
+        None, residual balancing will not be applied.
+    m1
+        Residual balancing parameter.
+    m2
+        Residual balancing parameter.
+    m3
+        Residual balancing parameter.
+    optimizer
+        Name and configuration of a ``pytorch`` optimizer.
+    parameterize
+        Optionally solve the alternate "parameterized"
+        formulation.
+    hat_init
+        A boolean determining whether to use hat initialization.
+
+    References
+    ----------
+
+    .. [#] Guo, Xin, et al. "MF-OMO: An Optimization Formulation of Mean-Field Games"
+            arXiv preprint (2022). https://arxiv.org/pdf/2206.09608
+
     """
 
     def __init__(
@@ -93,53 +200,6 @@ class MFOMO(Algorithm):
         parameterize: bool = False,
         hat_init: bool = False,
     ) -> None:
-        """Mean-field Occupation Measure Optimization algorithm.
-
-        Attributes
-        ----------
-        L
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        z
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        y
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        u
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        v
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        w
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        loss
-            Determines the type of norm used in the objective function.
-        c1
-            Objective function coefficient.
-        c2
-            Objective function coefficient.
-        c3
-            Objective function coefficient.
-        rb_freq
-            Determines how often residual balancing is applied. If
-            None, residual balancing will not be applied.
-        m1
-            Residual balancing parameter.
-        m2
-            Residual balancing parameter.
-        m3
-            Residual balancing parameter.
-        optimizer
-            Name and configuration of a Pytorch optimizer.
-        parameterize
-            Optionally solve the alternate "parameterized"
-            formulation.
-        hat_init
-            A boolean determining whether to use hat initialization.
-        """
         if loss not in ["l1", "l2", "l1_l2"]:
             raise ValueError("the valid loss arguments are 'l1', 'l2', and 'l1_l2'")
         if rb_freq is not None and rb_freq <= 0:
@@ -270,7 +330,7 @@ class MFOMO(Algorithm):
         return (
             f"MFOMO(loss={self.loss}, c1={self.c1}, c2={self.c2}, c3={self.c3}, "
             f"rb_freq={self.rb_freq}, m1={self.m1}, m2={self.m2}, m3={self.m3}, "
-            f"parameterize={self.parameterize})"
+            f"parameterize={self.parameterize}, hat_init={self.hat_init})"
         )
 
     def solve(
@@ -281,7 +341,7 @@ class MFOMO(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Mean-Field Occupation Measure Optimization algorithm.
 
@@ -352,29 +412,33 @@ class MFOMO(Algorithm):
             )
 
         solutions = [pi]
-        argmin = 0
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        printer = Printer.setup(
+            verbose=verbose,
+            env_instance=env_instance,
+            solver="MF-OMO",
+            parameters={
+                "loss": self.loss,
+                "c1": self.c1,
+                "c2": self.c2,
+                "c3": self.c3,
+                "rb_freq": self.rb_freq,
+                "m1": self.m1,
+                "m2": self.m2,
+                "m3": self.m3,
+                "parameterize": self.parameterize,
+                "hat_init": self.hat_init,
+            },
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+            expl_0=scores[0],
+        )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
+            printer.alert_early_stopping()
             return solutions, scores, runtimes
 
         t = time.time()
@@ -436,27 +500,15 @@ class MFOMO(Algorithm):
 
             solutions.append(pi.clone().detach())
             scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
             runtimes.append(time.time() - t)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            printer.notify_of_solution(n=n, expl_n=scores[n], runtime_n=runtimes[n])
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
+                printer.alert_early_stopping()
                 return solutions, scores, runtimes
 
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
+        printer.alert_iterations_exhausted()
         return solutions, scores, runtimes
 
     @classmethod
@@ -485,3 +537,17 @@ class MFOMO(Algorithm):
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
             hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "MFOMO":
+        best_params = study.best_params
+        rb_freq_bool = best_params.pop("rb_freq_bool")
+        rb_freq_num = best_params.pop("rb_freq_num")
+        rb_freq = None if rb_freq_bool else rb_freq_num
+
+        optimizer = {
+            "name": best_params.pop("name"),
+            "config": {"lr": best_params.pop("lr")},
+        }
+
+        return cls(rb_freq=rb_freq, optimizer=optimizer, **best_params)

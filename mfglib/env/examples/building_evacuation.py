@@ -52,12 +52,13 @@ class RewardFn:
         self.eta = eta
         self.log_eps = log_eps
 
-        self.first_floor_r = torch.zeros(S + (6,))
-        self.first_floor_r[-1, :, :, :] = evac_r
+        self.r = torch.zeros(S)
+        self.r[0] = evac_r
 
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
-        mu_t = L_t.flatten(start_dim=3).sum(-1)
+        mu_t = L_t.sum(dim=-1).clamp(min=self.log_eps)  # prevent ZeroDivisionError
 
-        mu_t_rptd = mu_t.repeat(6, 1, 1, 1).permute(1, 2, 3, 0)
+        reward = -self.eta * torch.log(mu_t) + self.r
 
-        return -self.eta * torch.log(mu_t_rptd + self.log_eps) + self.first_floor_r
+        # Passing -1 as the size for a dimension means not changing the size of that dimension.
+        return reward.unsqueeze(dim=-1).expand(-1, -1, -1, 6)
