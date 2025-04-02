@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from tempfile import TemporaryDirectory
-from typing import Literal
 
+import optuna
 import pytest
 import torch
 
@@ -15,7 +15,9 @@ from mfglib.alg import (
 )
 from mfglib.alg.abc import Algorithm
 from mfglib.env import Environment
-from mfglib.tuning import FailureRate, GeometricMean
+from mfglib.tuning import GeometricMean
+
+optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 
 @pytest.mark.parametrize(
@@ -62,44 +64,55 @@ def test_alg_on_lr(alg: Algorithm, mu0: tuple[float, float, float]) -> None:
 
 
 @pytest.mark.parametrize(
-    "alg",
+    "alg_cls",
     [
-        FictitiousPlay(),
-        MFOMO(),
-        OnlineMirrorDescent(),
-        PriorDescent(),
+        FictitiousPlay,
+        OnlineMirrorDescent,
+        PriorDescent,
+        MFOMO,
+        OccupationMeasureInclusion,
     ],
 )
-@pytest.mark.parametrize("stat", ["iter", "rt", "expl"])
-def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> None:
-    rps = Environment.rock_paper_scissors()
+def test_tuner_reduces_expl(alg_cls: type[Algorithm]) -> None:
+    """Tuner workflow reduces minimal exploitability."""
+    MAX_ITER = 20
 
-    alg.tune(
-        envs=[rps],
-        pi0s="uniform",
-        metric=FailureRate(fail_thresh=100, stat=stat),
-        solve_kwargs={"max_iter": 200},
-        n_trials=5,
-        timeout=20,
+    env = Environment.susceptible_infected(T=7)
+    alg = alg_cls()
+
+    optuna_study = alg.tune(
+        metric=GeometricMean(shift=0),
+        envs=[env],
+        solve_kwargs={"max_iter": MAX_ITER, "atol": None, "rtol": None},
+        n_trials=20,
     )
-    # NOTE: fail_thresh is not required when stat == "rt"
-    if stat != "rt":
-        alg.tune(
-            envs=[rps],
-            pi0s="uniform",
-            metric=FailureRate(stat=stat),
-            solve_kwargs={"max_iter": 200},
-            n_trials=5,
-            timeout=20,
-        )
-    alg.tune(
-        envs=[rps],
-        pi0s="uniform",
-        metric=GeometricMean(shift=1.0, stat=stat),
-        solve_kwargs={"max_iter": 200},
-        n_trials=5,
-        timeout=20,
+    alg_tune = alg_cls.from_study(optuna_study)
+
+    _, expls_orig, _ = alg.solve(env, max_iter=MAX_ITER, atol=None, rtol=None)
+    _, expls_tune, _ = alg_tune.solve(env, max_iter=MAX_ITER, atol=None, rtol=None)
+
+    min_expl_orig = min(expls_orig)
+    min_expl_tune = min(expls_tune)
+
+    assert optuna_study.best_trial.value == min_expl_tune
+    assert min_expl_tune < min_expl_orig
+
+
+def test_tuner_finds_low_expl() -> None:
+    """Tuner workflow is able to find parameters with low exploitability."""
+    MAX_ITER = 600
+
+    env = Environment.building_evacuation(n_floor=3, floor_l=5, floor_w=5)
+    alg = OnlineMirrorDescent()
+
+    optuna_study = alg.tune(
+        metric=GeometricMean(shift=0),
+        envs=[env],
+        solve_kwargs={"max_iter": MAX_ITER, "atol": None, "rtol": None},
+        n_trials=30,
     )
+    assert optuna_study.best_trial.value is not None
+    assert 0 <= optuna_study.best_trial.value <= 3e-4
 
 
 @pytest.mark.parametrize("alpha", [None, 1.0])
