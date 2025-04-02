@@ -8,34 +8,36 @@ import torch
 
 from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.q_fn import QFn
-from mfglib.alg.utils import (
-    _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
-    _trigger_early_stopping,
-)
+from mfglib.alg.utils import Printer, _ensure_free_tensor, _trigger_early_stopping
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 from mfglib.scoring import exploitability_score
 
 
 class PriorDescent(Algorithm):
-    """Prior Descent algorithm.
+    """
+    When ``n_inner=None``, the algorithm is the same as **GMF-V**.
 
-    Notes
-    -----
-    When `n_inner=None`, the algorithm is the same as GMF-V.
+    Parameters
+    ----------
+    eta
+        Positive temperature parameter.
+    n_inner
+        The prior is updated every ``n_inner`` iterations. If ``n_inner=None``,
+        the prior remains intact.
 
-    See [#pd1]_ and [#pd2]_ for algorithm details.
 
-    .. [#pd1] Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
+    References
+    ----------
+
+    .. [#] Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
         entropy-regularized deep reinforcement learning." International Conference
         on Artificial Intelligence and Statistics. PMLR, 2021.
         https://proceedings.mlr.press/v130/cui21a.html
 
-    .. [#pd2] Guo, Xin, et al. "Learning mean-field games." Advances in Neural
+    .. [#] Guo, Xin, et al. "Learning mean-field games." Advances in Neural
         Information Processing Systems 32 (2019). https://arxiv.org/abs/1901.09585
+
     """
 
     def __init__(self, eta: float = 1.0, n_inner: int | None = None) -> None:
@@ -69,7 +71,7 @@ class PriorDescent(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
 
@@ -101,29 +103,22 @@ class PriorDescent(Algorithm):
         q = pi.clone()
 
         solutions = [pi]
-        argmin = 0
         scores = [exploitability_score(env_instance, pi)]
         runtimes = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        printer = Printer.setup(
+            verbose=verbose,
+            env_instance=env_instance,
+            solver="PriorDescent",
+            parameters={"eta": self.eta, "n_inner": self.n_inner},
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+            expl_0=scores[0],
+        )
 
         if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
+            printer.alert_early_stopping()
             return solutions, scores, runtimes
 
         t = time.time()
@@ -151,27 +146,15 @@ class PriorDescent(Algorithm):
 
             solutions.append(pi.clone().detach())
             scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
             runtimes.append(time.time() - t)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            printer.notify_of_solution(n=n, expl_n=scores[n], runtime_n=runtimes[n])
 
             if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
+                printer.alert_early_stopping()
                 return solutions, scores, runtimes
 
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
+        printer.alert_iterations_exhausted()
         return solutions, scores, runtimes
 
     @classmethod
@@ -183,3 +166,11 @@ class PriorDescent(Algorithm):
             eta=trial.suggest_float("eta", 1e-5, 1e5, log=True),
             n_inner=n_inner,
         )
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "PriorDescent":
+        best_params = study.best_params
+        n_inner_bool = best_params.pop("n_inner_bool")
+        n_inner_num = best_params.pop("n_inner_num")
+        n_inner = None if n_inner_bool else n_inner_num
+        return cls(n_inner=n_inner, **best_params)

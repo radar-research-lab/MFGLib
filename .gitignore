@@ -11,3 +11,5 @@ poetry.toml
 docs/build
 docs/jupyter_execute
 .coverage
+
+!docs/source/examples.ipynb
