@@ -6,7 +6,7 @@ from typing import Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm, Self
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.q_fn import QFn
 from mfglib.alg.utils import Printer, _ensure_free_tensor, _trigger_early_stopping
 from mfglib.env import Environment

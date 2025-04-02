@@ -8,7 +8,7 @@ from typing import Any, Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm, Self
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
 from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
