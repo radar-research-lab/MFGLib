@@ -49,3 +49,4 @@ To implement a user-defined method, you simply need to create an object which im
 ``evaluate()`` method with the following signature.
 
 .. autoclass:: mfglib.tuning::Metric.evaluate
+    :no-index:
