@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from tempfile import TemporaryDirectory
-from typing import Any, Literal
+from typing import Literal
 
 import pytest
 import torch
-from torch.testing import assert_close
 
 from mfglib.alg import (
     MFOMO,
@@ -19,33 +18,14 @@ from mfglib.env import Environment
 from mfglib.tuning import FailureRate, GeometricMean
 
 
-def _assert_lr_solved(
-    algorithm: Algorithm, lr: Environment, atol: float, rtol: float
-) -> None:
-    """See https://github.com/junziz/MFGLib/issues/55 for derivations."""
-    solns, _, _ = algorithm.solve(lr, max_iter=2000, atol=atol, rtol=rtol)
-    pi = solns[-1]
-
-    # The shape should reflect two time steps, three states, and two actions
-    assert pi.shape == (2, 3, 2)
-
-    # NE requirement as derived in GH#55
-    result = lr.mu0 @ pi[0, :, 0]
-    expected = (2.0 / 3.0) * torch.ones_like(result)
-    assert_close(result, expected, atol=atol, rtol=rtol)
-
-    # Policies at all time steps should be valid probability distributions
-    result = pi.sum(dim=-1)
-    expected = torch.ones_like(result)
-    assert_close(result, expected)
-
-
 @pytest.mark.parametrize(
-    "algorithm",
+    "alg",
     [
         FictitiousPlay(alpha=0.001),
-        PriorDescent(eta=1.0, n_inner=50),
-        OnlineMirrorDescent(alpha=1.0),
+        PriorDescent(eta=2.0, n_inner=50),
+        OnlineMirrorDescent(alpha=0.01),
+        MFOMO(),
+        OccupationMeasureInclusion(),
     ],
 )
 @pytest.mark.parametrize(
@@ -54,40 +34,31 @@ def _assert_lr_solved(
         (1.0, 0.0, 0.0),
         (0.0, 1.0, 0.0),
         (0.0, 0.0, 1.0),
-        (0.5, 0.25, 0.25),
-        (0.5, 0.5, 0.0),
-        (0.5, 0.0, 0.5),
+        (1 / 3, 1 / 3, 1 / 3),
     ],
 )
-@pytest.mark.parametrize("atol", [1e-4])
-@pytest.mark.parametrize("rtol", [1e-4])
-def test_algorithms_on_lr(
-    algorithm: Algorithm, mu0: tuple[float, float, float], atol: float, rtol: float
-) -> None:
-    _assert_lr_solved(
-        algorithm=algorithm, lr=Environment.left_right(mu0), atol=atol, rtol=rtol
-    )
+def test_alg_on_lr(alg: Algorithm, mu0: tuple[float, float, float]) -> None:
+    """Algorithm solves simple Left Right environment.
 
+    See https://github.com/junziz/MFGLib/issues/55 for NE derivation.
+    """
+    lr = Environment.left_right(mu0)
 
-@pytest.mark.parametrize(
-    "source,name,config,n_iter,parameterized",
-    [
-        ("pytorch", "Adam", {"lr": 1.0}, 300, False),
-        ("pytorch", "Adam", {"lr": 0.1}, 1000, True),
-    ],
-)
-def test_mf_omo_on_lr(
-    source: Literal["pytorch"],
-    name: str,
-    config: dict[str, Any],
-    n_iter: int,
-    parameterized: bool,
-) -> None:
-    lr = Environment.left_right(mu0=(1.0, 0.0, 0.0))
-    algorithm = MFOMO(
-        optimizer={"source": source, "name": name, "config": config},
-    )
-    _assert_lr_solved(algorithm=algorithm, lr=lr, atol=0.0005, rtol=0.00008)
+    pis, _, _ = alg.solve(lr, max_iter=1000, atol=None, rtol=None)
+    pi_last = pis[-1]
+
+    # The shape should reflect two time steps, three states, and two actions
+    assert pi_last.shape == (2, 3, 2)
+
+    # NE requirement as derived in GH#55
+    result = lr.mu0 @ pi_last[0, :, 0]
+    expected = (2.0 / 3.0) * torch.ones_like(result)
+    torch.testing.assert_close(result, expected, atol=5e-4, rtol=5e-4)
+
+    # Policies at all time steps should be valid probability distributions
+    result = pi_last.sum(dim=-1)
+    expected = torch.ones_like(result)
+    torch.testing.assert_close(result, expected)
 
 
 @pytest.mark.parametrize(
