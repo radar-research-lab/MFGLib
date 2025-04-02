@@ -20,8 +20,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinxcontrib.bibtex",
-    "jupyter_sphinx",
-    "matplotlib.sphinxext.plot_directive",
     "nbsphinx",
 ]
 napoleon_numpy_docstring = True
@@ -38,9 +36,6 @@ copybutton_prompt_text = "$ "
 
 # Prevent autodoc from using fully qualified object names
 add_module_names = False
-
-# Disable download links for plot images
-plot_html_show_formats = False
 
 exclude_patterns = []
 
