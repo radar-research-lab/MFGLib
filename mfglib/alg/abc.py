@@ -93,6 +93,10 @@ class Algorithm(abc.ABC):
     def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
         raise NotImplementedError
 
+    @classmethod
+    def from_study(cls: type[Self], study: optuna.Study) -> Self:
+        return cls(**study.best_params)
+
     def tune(
         self,
         metric: Metric,

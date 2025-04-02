@@ -22,6 +22,7 @@ extensions = [
     "sphinxcontrib.bibtex",
     "jupyter_sphinx",
     "matplotlib.sphinxext.plot_directive",
+    "nbsphinx",
 ]
 napoleon_google_docstring = False
 autosectionlabel_prefix_document = True
@@ -42,4 +43,3 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-
