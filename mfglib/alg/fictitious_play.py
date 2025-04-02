@@ -168,3 +168,11 @@ class FictitiousPlay(Algorithm):
         alpha_num = trial.suggest_float("alpha_num", 0.0, 1.0)
         alpha = None if alpha_bool else alpha_num
         return FictitiousPlay(alpha=alpha)
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "FictitiousPlay":
+        best_params = study.best_params
+        alpha_bool = best_params.pop("alpha_bool")
+        alpha_num = best_params.pop("alpha_num")
+        alpha = None if alpha_bool else alpha_num
+        return cls(alpha=alpha)

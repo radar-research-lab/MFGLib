@@ -8,7 +8,7 @@ from typing import Any, Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm, Self
 from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
@@ -475,3 +475,17 @@ class MFOMO(Algorithm):
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
             hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "MFOMO":
+        best_params = study.best_params
+        rb_freq_bool = best_params.pop("rb_freq_bool")
+        rb_freq_num = best_params.pop("rb_freq_num")
+        rb_freq = None if rb_freq_bool else rb_freq_num
+
+        optimizer = {
+            "name": best_params.pop("name"),
+            "config": {"lr": best_params.pop("lr")},
+        }
+
+        return cls(rb_freq=rb_freq, optimizer=optimizer, **best_params)

@@ -6,7 +6,7 @@ from typing import Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm, Self
 from mfglib.alg.q_fn import QFn
 from mfglib.alg.utils import Printer, _ensure_free_tensor, _trigger_early_stopping
 from mfglib.env import Environment
@@ -158,3 +158,11 @@ class PriorDescent(Algorithm):
             eta=trial.suggest_float("eta", 1e-5, 1e5, log=True),
             n_inner=n_inner,
         )
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "PriorDescent":
+        best_params = study.best_params
+        n_inner_bool = best_params.pop("n_inner_bool")
+        n_inner_num = best_params.pop("n_inner_num")
+        n_inner = None if n_inner_bool else n_inner_num
+        return cls(n_inner=n_inner, **best_params)
