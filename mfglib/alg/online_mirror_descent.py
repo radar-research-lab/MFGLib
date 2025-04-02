@@ -15,24 +15,21 @@ from mfglib.scoring import exploitability_score
 
 
 class OnlineMirrorDescent(Algorithm):
-    """Online Mirror Descent algorithm.
+    """The **Online Mirror Descent** algorithm.
 
-    Notes
-    -----
-    See [#omd1]_ for algorithm details.
+    Parameters
+    ----------
+    alpha
+        Positive learning rate hyperparameter.
 
-    .. [#omd1] Perolat, Julien, et al. "Scaling up mean field games with online mirror
+    References
+    ----------
+    .. [#] Perolat, Julien, et al. "Scaling up mean field games with online mirror
         descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
+
     """
 
     def __init__(self, alpha: float = 1.0) -> None:
-        """Online Mirror Descent algorithm.
-
-        Attributes
-        ----------
-        alpha
-            Learning rate hyperparameter.
-        """
         self.alpha = alpha
 
     def __str__(self) -> str:

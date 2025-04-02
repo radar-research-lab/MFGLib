@@ -5,6 +5,7 @@
     quickstart
     algorithms
     environments
+    tuning
     examples
     citation
     references

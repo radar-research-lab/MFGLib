@@ -20,37 +20,34 @@ from mfglib.scoring import exploitability_score
 
 
 class FictitiousPlay(Algorithm):
-    """Fictitious Play algorithm.
+    """The **Fictitious Play** algorithm.
 
-    Notes
-    -----
-    The implementation is based on Fictitious Play Damped.
+    The implementation is based on **Fictitious Play Damped**. The damped
+    version generalizes the original algorithm by adding a learning rate
+    parameter ``alpha``.
 
-    When ``alpha=None``, the algorithm is the same as the original Fictitious Play
-    algorithm. When ``alpha=1``, the algorithm is the same as Fixed Point Iteration
-    algorithm.
+    When ``alpha=None``, the algorithm is the same as the original
+    **Fictitious Play** algorithm. When ``alpha=1``, the algorithm is the same
+    as the  **Fixed Point Iteration** algorithm.
 
-    See [#fp1]_ and [#fp2]_ for algorithm details.
+    Parameters
+    ----------
+    alpha
+        Learning rate hyperparameter. If ``None``, in iteration ``n`` the
+        learning rate is set to ``1 / (n + 1)``.
 
-    .. [#fp1] Perrin, Sarah, et al. "Fictitious play for mean field games: Continuous
+    References
+    ----------
+    .. [#] Perrin, Sarah, et al. "Fictitious play for mean field games: Continuous
         time analysis and applications." Advances in Neural Information Processing
         Systems 33 (2020): 13199-13213. https://arxiv.org/abs/2007.03458
 
-    .. [#fp2] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021).
-        https://arxiv.org/abs/2103.00623
+    .. [#] Perolat, Julien, et al. "Scaling up mean field games with online mirror
+        descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
 
     """
 
     def __init__(self, alpha: float | None = None) -> None:
-        """Fictitious Play algorithm.
-
-        Attributes
-        ----------
-        alpha
-            Learning rate hyperparameter. If None, in iteration n the
-            learning rate is 1 / (n + 1).
-        """
         if alpha:
             if not isinstance(alpha, (int, float)) or not 0 <= alpha <= 1:
                 raise ValueError("if not None, `alpha` must be a float in [0, 1]")

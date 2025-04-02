@@ -44,7 +44,7 @@ class Algorithm(abc.ABC):
         rtol: float | None = DEFAULT_RTOL,
         verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
-        """Run the algorithm and solve for a Nash-Equilibrium policy."""
+        """Run the algorithm and solve for a Nash equilibrium policy."""
         raise NotImplementedError
 
     def save(self, path: Path | str) -> None:
@@ -89,36 +89,36 @@ class Algorithm(abc.ABC):
 
         Args
         ----
-            metric
-                Objective function to minimizer.
-            envs
-                List of environment targets.
-            pi0s
-                Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
-                computing the metrics.
-            solve_kwargs
-                Additional keyword arguments passed to the solver.
-            sampler
-                The sampler used to explore the search space of the optimization.
-                If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
-                used. The sampler guides how different hyperparameter trials are
-                selected.
-            frozen_attrs
-                A list of attributes that should be frozen (i.e., fixed) during the
-                optimization process. These attributes will not be considered for
-                optimization, and their values will be taken directly from the instance
-                of the class.
-            n_trials
-                The  number of trials to run. Refer to ``optuna`` documentation for
-                further details on the handling of ``None``.
-            timeout
-                Stop study after the given number of second(s). Refer to ``optuna``
-                documentation for further details.
+        metric
+            Objective function to minimizer.
+        envs
+            List of environment targets.
+        pi0s
+            Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
+            computing the metrics.
+        solve_kwargs
+            Additional keyword arguments passed to the solver.
+        sampler
+            The sampler used to explore the search space of the optimization.
+            If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
+            used. The sampler guides how different hyperparameter trials are
+            selected.
+        frozen_attrs
+            A list of attributes that should be frozen (i.e., fixed) during the
+            optimization process. These attributes will not be considered for
+            optimization, and their values will be taken directly from the instance
+            of the class.
+        n_trials
+            The  number of trials to run. Refer to ``optuna`` documentation for
+            further details on the handling of ``None``.
+        timeout
+            Stop study after the given number of second(s). Refer to ``optuna``
+            documentation for further details.
 
         Returns
         -------
-        optuna.Study
-            The result of the hyperparameter tuning process.
+        A ``study`` containing the optimization result.
+        The optimal parameters are accessible via ``study.best_params``.
 
         """
         if sampler is None:
