@@ -15,8 +15,7 @@ from mfglib.scoring import exploitability_score
 
 
 class OnlineMirrorDescent(Algorithm):
-    """The **Online Mirror Descent** algorithm.
-
+    r"""
     Parameters
     ----------
     alpha
@@ -24,6 +23,7 @@ class OnlineMirrorDescent(Algorithm):
 
     References
     ----------
+
     .. [#] Perolat, Julien, et al. "Scaling up mean field games with online mirror
         descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
 

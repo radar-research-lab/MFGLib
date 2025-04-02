@@ -20,8 +20,7 @@ from mfglib.scoring import exploitability_score
 
 
 class FictitiousPlay(Algorithm):
-    """The **Fictitious Play** algorithm.
-
+    r"""
     The implementation is based on **Fictitious Play Damped**. The damped
     version generalizes the original algorithm by adding a learning rate
     parameter ``alpha``.
@@ -33,17 +32,18 @@ class FictitiousPlay(Algorithm):
     Parameters
     ----------
     alpha
-        Learning rate hyperparameter. If ``None``, in iteration ``n`` the
-        learning rate is set to ``1 / (n + 1)``.
+        Learning rate hyperparameter. If ``alpha=None``, then in iteration :math:`n` the
+        learning rate is set to :math:`\frac{1}{n + 1}`.
 
     References
     ----------
+
     .. [#] Perrin, Sarah, et al. "Fictitious play for mean field games: Continuous
         time analysis and applications." Advances in Neural Information Processing
         Systems 33 (2020): 13199-13213. https://arxiv.org/abs/2007.03458
 
     .. [#] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
+        descent." arXiv preprint (2021). https://arxiv.org/abs/2103.00623
 
     """
 

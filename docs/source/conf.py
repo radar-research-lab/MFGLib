@@ -31,6 +31,9 @@ bibtex_bibfiles = ["refs.bib"]
 bibtex_default_style = "plain"
 bibtex_reference_style = "super"
 
+# In the algorithm docstrings, the footnote references aren't explicitly referenced
+suppress_warnings = ["ref.footnote"]
+
 # We want the '$' symbol to get stripped when someone copies a code snippet.
 copybutton_prompt_text = "$ "
 

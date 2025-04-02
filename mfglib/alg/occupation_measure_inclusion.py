@@ -54,8 +54,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
 
 
 class OccupationMeasureInclusion(Algorithm):
-    """The **Occupation Measure Inclusion** algorithm.
-
+    """
     **MF-OMI**, or Occupation Measure Inclusion, recasts the objective of
     finding a mean-field Nash equilibrium as an inclusion problem with
     occupation-measure variables.
@@ -73,8 +72,10 @@ class OccupationMeasureInclusion(Algorithm):
 
     References
     ----------
-    .. [#] Hu, A., & Zhang, J. (2024). MF-OML: Online Mean-Field Reinforcement Learning with
-            Occupation Measures for Large Population Games. https://arxiv.org/abs/2405.00282
+
+    .. [#] Hu, Anran, and Junzi Zhang. "MF-OML: Online Mean-Field Reinforcement Learning with
+            Occupation Measures for Large Population Games." arXiv preprint (2024).
+            https://arxiv.org/abs/2405.00282
 
     """
 

@@ -15,8 +15,7 @@ from mfglib.scoring import exploitability_score
 
 
 class PriorDescent(Algorithm):
-    """The **Prior Descent** algorithm.
-
+    """
     When ``n_inner=None``, the algorithm is the same as **GMF-V**.
 
     Parameters
@@ -24,12 +23,13 @@ class PriorDescent(Algorithm):
     eta
         Positive temperature parameter.
     n_inner
-        The prior is updated every ``n_inner`` iterations. If ``None``,
+        The prior is updated every ``n_inner`` iterations. If ``n_inner=None``,
         the prior remains intact.
 
 
     References
     ----------
+
     .. [#] Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
         entropy-regularized deep reinforcement learning." International Conference
         on Artificial Intelligence and Statistics. PMLR, 2021.

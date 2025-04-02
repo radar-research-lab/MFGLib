@@ -61,11 +61,11 @@ def _verify(
 
 
 class MFOMO(Algorithm):
-    r"""The **MF-OMO** algorithm.
-
+    r"""
     **MF-OMO**, or Mean-Field Occupation Measure Inclusion, reformulates the
-    MFG as an optimization problem. Specifically, in its most basic form it
-    solves
+    MFG as an optimization problem.
+
+    In its most basic form **MF-OMO** solves
 
     .. math::
 
@@ -174,8 +174,9 @@ class MFOMO(Algorithm):
 
     References
     ----------
-    .. [#] MF-OMO: An Optimization Formulation of Mean-Field Games
-        Guo, X., Hu, A., & Zhang, J. (2022). arXiv:2206.09608.
+
+    .. [#] Guo, Xin, et al. "MF-OMO: An Optimization Formulation of Mean-Field Games"
+            arXiv preprint (2022). https://arxiv.org/pdf/2206.09608
 
     """
 
