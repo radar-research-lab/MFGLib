@@ -173,7 +173,7 @@ class Algorithm(abc.ABC):
 
 
 class State(Protocol):
-    pi_i: torch.Tensor
+    pi: torch.Tensor
 
 
 T = TypeVar("T", bound=State)

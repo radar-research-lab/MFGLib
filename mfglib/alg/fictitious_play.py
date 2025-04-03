@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import optuna
 import torch
 
@@ -9,16 +11,11 @@ from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
+@dataclass(kw_only=True)
 class State:
-    def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-        self.env = env
-        self.pi_i = pi_0
-        self.i = 0
-
-    def next(self, pi_i: torch.Tensor) -> State:
-        self.i += 1
-        self.pi_i = pi_i
-        return self
+    i: int
+    env: Environment
+    pi: torch.Tensor
 
 
 class FictitiousPlay(Iterative[State]):
@@ -63,14 +60,14 @@ class FictitiousPlay(Iterative[State]):
         return f"FictitiousPlay(alpha={self.alpha})"
 
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
-        return State(env=env, pi_0=pi_0)
+        return State(i=0, env=env, pi=pi_0)
 
     def step_state(self, state: State) -> State:
-        L = mean_field(state.env, state.pi_i)
+        L = mean_field(state.env, state.pi)
         pi_br = Greedy_Policy(state.env, L)
         L_br = mean_field(state.env, pi_br)
 
-        pi_i = state.pi_i
+        pi = state.pi
         states_dim = len(state.env.S)
 
         mu = L.flatten(start_dim=1 + states_dim).sum(dim=-1, keepdim=True)
@@ -78,11 +75,11 @@ class FictitiousPlay(Iterative[State]):
 
         alpha_i = self.alpha if self.alpha else 1 / (state.i + 1)
 
-        numer = (1 - alpha_i) * mu * pi_i + alpha_i * mu_br * pi_br
+        numer = (1 - alpha_i) * mu * pi + alpha_i * mu_br * pi_br
         denom = (1 - alpha_i) * mu + alpha_i * mu_br
-        pi_i = (numer / denom).nan_to_num(nan=1 / state.env.n_actions)
+        pi = (numer / denom).nan_to_num(nan=1 / state.env.n_actions)
 
-        return state.next(pi_i)
+        return State(i=state.i + 1, env=state.env, pi=pi)
 
     @property
     def parameters(self) -> dict[str, float | str | None]:

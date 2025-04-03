@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import optuna
 import torch
 
@@ -9,15 +11,11 @@ from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
+@dataclass(kw_only=True)
 class State:
-    def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-        self.env = env
-        self.pi_i = pi_0
-        self.y = torch.zeros(env.T + 1, *env.S, *env.A)
-
-    def next(self, pi_i: torch.Tensor) -> State:
-        self.pi_i = pi_i
-        return self
+    env: Environment
+    pi: torch.Tensor
+    y: torch.Tensor
 
 
 class OnlineMirrorDescent(Iterative[State]):
@@ -46,17 +44,17 @@ class OnlineMirrorDescent(Iterative[State]):
         return f"OnlineMirrorDescent(alpha={self.alpha})"
 
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
-        return State(env=env, pi_0=pi_0)
+        return State(env=env, pi=pi_0, y=torch.zeros(env.T + 1, *env.S, *env.A))
 
     def step_state(self, state: State) -> State:
-        L = mean_field(state.env, state.pi_i)
-        Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi_i)
-        state.y += self.alpha * Q
+        L = mean_field(state.env, state.pi)
+        Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi)
+        y = state.y + self.alpha * Q
         states_dim = len(state.env.S)
         y_flat = state.y.flatten(start_dim=1 + states_dim)
         softmax = torch.nn.Softmax(dim=-1)
-        pi_i = softmax(y_flat).reshape(state.env.T + 1, *state.env.S, *state.env.A)
-        return state.next(pi_i)
+        pi = softmax(y_flat).reshape(state.env.T + 1, *state.env.S, *state.env.A)
+        return State(env=state.env, pi=pi, y=y)
 
     @property
     def parameters(self) -> dict[str, float | str | None]:

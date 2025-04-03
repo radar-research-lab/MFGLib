@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import optuna
 import torch
 
@@ -9,18 +11,12 @@ from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
+@dataclass(kw_only=True)
 class State:
-    def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-        self.env = env
-        self.pi_i = pi_0
-        self.i = 0
-        self.q = pi_0.clone()
-
-    def next(self, pi_i: torch.Tensor, q: torch.Tensor) -> State:
-        self.i += 1
-        self.pi_i = pi_i
-        self.q = q
-        return self
+    i: int
+    env: Environment
+    pi: torch.Tensor
+    q: torch.Tensor
 
 
 class PriorDescent(Iterative[State]):
@@ -65,20 +61,20 @@ class PriorDescent(Iterative[State]):
         return f"PriorDescent(eta={self.eta}, n_inner={self.n_inner})"
 
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
-        return State(env=env, pi_0=pi_0)
+        return State(i=0, env=env, pi=pi_0, q=pi_0.clone())
 
     def step_state(self, state: State) -> State:
-        L = mean_field(state.env, state.pi_i)
+        L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).optimal() / self.eta
         vals = (state.q * Q.exp()).flatten(start_dim=1 + len(state.env.S))
-        pi_i = torch.softmax(vals, dim=-1).reshape(
+        pi = torch.softmax(vals, dim=-1).reshape(
             state.env.T + 1, *state.env.S, *state.env.A
         )
         if self.n_inner and (state.i + 1) % self.n_inner == 0:
-            q = pi_i.clone()
+            q = pi.clone()
         else:
             q = state.q
-        return state.next(pi_i=pi_i, q=q)
+        return State(i=state.i + 1, env=state.env, pi=pi, q=q)
 
     @property
     def parameters(self) -> dict[str, float | str | None]:
