@@ -1,27 +1,31 @@
 from __future__ import annotations
 
-import time
-from typing import Literal
+import dataclasses
 
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+import mfglib.alg.abc
+from mfglib.alg.abc import Algorithm
 from mfglib.alg.greedy_policy_given_mean_field import Greedy_Policy
-from mfglib.alg.utils import (
-    _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
-    _trigger_early_stopping,
-    tuple_prod,
-)
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.scoring import exploitability_score
 
 
-class FictitiousPlay(Algorithm):
+@dataclasses.dataclass
+class State(mfglib.alg.abc.State):
+    def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
+        super().__init__(pi_i=pi_0)
+        self.env = env
+        self.i = 0
+
+    def next(self, pi_i: torch.Tensor) -> State:
+        self.i += 1
+        self.pi_i = pi_i
+        return self
+
+
+class FictitiousPlay(Algorithm[State]):
     """Fictitious Play algorithm.
 
     Notes
@@ -62,126 +66,31 @@ class FictitiousPlay(Algorithm):
         """Represent algorithm instance and associated parameters with a string."""
         return f"FictitiousPlay(alpha={self.alpha})"
 
-    def solve(
-        self,
-        env_instance: Environment,
-        *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
-        max_iter: int = DEFAULT_MAX_ITER,
-        atol: float | None = DEFAULT_ATOL,
-        rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
-    ) -> tuple[list[torch.Tensor], list[float], list[float]]:
-        """Run the algorithm and solve for a Nash-Equilibrium policy.
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
+        return State(env=env, pi_0=pi_0)
 
-        Args
-        ----
-        env_instance
-            An instance of a specific environment.
-        pi
-            A tensor of size (T+1,)+S+A representing the initial policy. If
-            'uniform', the initial policy will be the uniform distribution.
-        max_iter
-            Maximum number of iterations to run.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        verbose
-            Print convergence information during iteration.
-        """
-        S = env_instance.S
-        A = env_instance.A
+    def step_state(self, state: State) -> State:
+        L = mean_field(state.env, state.pi_i)
+        pi_br = Greedy_Policy(state.env, L)
+        L_br = mean_field(state.env, pi_br)
 
-        # Auxiliary variables
-        l_s = len(S)
-        l_a = len(A)
-        n_a = tuple_prod(A)
-        ones_ts = (1,) * (1 + l_s)
-        ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
+        pi_i = state.pi_i
+        states_dim = len(state.env.S)
 
-        pi = _ensure_free_tensor(pi, env_instance)
+        mu = L.flatten(start_dim=1 + states_dim).sum(dim=-1, keepdim=True)
+        mu_br = L_br.flatten(start_dim=1 + states_dim).sum(dim=-1, keepdim=True)
 
-        solutions = [pi]
-        argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
-        runtimes = [0.0]
+        alpha_i = self.alpha if self.alpha else 1 / (state.i + 1)
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        numer = (1 - alpha_i) * mu * pi_i + alpha_i * mu_br * pi_br
+        denom = (1 - alpha_i) * mu + alpha_i * mu_br
+        pi_i = (numer / denom).nan_to_num(nan=1 / state.env.n_actions)
 
-        if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
-            return solutions, scores, runtimes
+        return state.next(pi_i)
 
-        t = time.time()
-        for n in range(1, max_iter + 1):
-            # Compute the greedy policy and its induced mean-field
-            L = mean_field(env_instance, pi)
-            pi_br = Greedy_Policy(env_instance, L)
-            L_br = mean_field(env_instance, pi_br)
-
-            # Update policy
-            mu_rptd = (
-                L.flatten(start_dim=1 + l_s)
-                .sum(-1)
-                .repeat(A + ones_ts)
-                .permute(ats_to_tsa)
-            )
-            mu_br_rptd = (
-                L_br.flatten(start_dim=1 + l_s)
-                .sum(-1)
-                .repeat(A + ones_ts)
-                .permute(ats_to_tsa)
-            )
-            weight = self.alpha if self.alpha else 1 / (n + 1)
-
-            pi_next_num = (1 - weight) * pi.mul(mu_rptd) + weight * pi_br.mul(
-                mu_br_rptd
-            )
-            pi_next_den = (1 - weight) * mu_rptd + weight * mu_br_rptd
-            pi = pi_next_num.div(pi_next_den).nan_to_num(
-                nan=1 / n_a, posinf=1 / n_a, neginf=1 / n_a
-            )  # using uniform distribution when divided by zero
-
-            solutions.append(pi.clone().detach())
-            scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
-            runtimes.append(time.time() - t)
-
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
-
-            if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
-                return solutions, scores, runtimes
-
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
-        return solutions, scores, runtimes
+    @property
+    def parameters(self) -> dict[str, float | str]:
+        return {"alpha": self.alpha}
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> FictitiousPlay:

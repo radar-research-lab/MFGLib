@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import dataclasses
 import json
 import time
 import warnings
@@ -37,10 +38,9 @@ if TYPE_CHECKING:
     from mfglib.tuning import Metric
 
 
-class State(abc.ABC):
-    @abc.abstractmethod
-    def current_policy(self) -> torch.Tensor:
-        raise NotImplementedError
+@dataclasses.dataclass
+class State:
+    pi_i: torch.Tensor
 
 
 Self = TypeVar("Self", bound="Algorithm")
@@ -84,7 +84,7 @@ class Algorithm(abc.ABC, Generic[T]):
         t_0 = time.time()
         rts = [0.0]
 
-        state = self.init_state(pi_0)
+        state = self.init_state(env, pi_0)
 
         logger = Logger(verbose)
         logger.display_info(env=env, alg=self, atol=atol, rtol=rtol, max_iter=max_iter)
@@ -102,7 +102,7 @@ class Algorithm(abc.ABC, Generic[T]):
 
         for i in range(1, max_iter + 1):
             state = self.step_state(state)
-            pis += [state.current_policy()]
+            pis += [state.pi_i]
             expls += expl_score(env, pis[i])
             rts += [time.time() - t_0]
             if expls[i] < expls[argmin]:
@@ -122,7 +122,7 @@ class Algorithm(abc.ABC, Generic[T]):
         return pis, expls, rts
 
     @abc.abstractmethod
-    def init_state(self, pi_0: torch.Tensor) -> T:
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> T:
         raise NotImplementedError
 
     @abc.abstractmethod

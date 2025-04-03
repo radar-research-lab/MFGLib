@@ -76,6 +76,10 @@ class Environment:
     def n_actions(self) -> int:
         return torch.tensor(self.A).prod().item()
 
+    @property
+    def n_states(self) -> int:
+        return torch.tensor(self.S).prod().item()
+
     @classmethod
     def beach_bar(
         cls,
