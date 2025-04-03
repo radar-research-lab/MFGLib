@@ -275,21 +275,21 @@ class MFOMO(Algorithm):
 
     def solve(
         self,
-        env_instance: Environment,
+        env: Environment,
         *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
+        pi_0: Literal["uniform"] | torch.Tensor = "uniform",
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Mean-Field Occupation Measure Optimization algorithm.
 
         Args
         ----
-        env_instance
+        env
             An instance of a specific environment.
-        pi
+        pi_0
             A user-provided array of size (T+1,) + S + A representing the initial
             policy. If 'uniform', the initial policy will be uniformly distributed.
         max_iter
@@ -301,29 +301,19 @@ class MFOMO(Algorithm):
         verbose
             Print convergence information during iteration.
         """
-        T = env_instance.T
-        S = env_instance.S
-        A = env_instance.A
+        T = env.T
+        S = env.S
+        A = env.A
 
-        pi = _ensure_free_tensor(pi, env_instance)
+        pi = _ensure_free_tensor(pi_0, env)
 
         # Initialization
-        L = self._init_L(env_instance, pi)
+        L = self._init_L(env, pi)
         L_u_tensor = (
-            self._init_u(env_instance, pi)
-            if self.parameterize
-            else self._init_L(env_instance, pi)
+            self._init_u(env, pi) if self.parameterize else self._init_L(env, pi)
         )
-        z_v_tensor = (
-            self._init_v(env_instance, L)
-            if self.parameterize
-            else self._init_z(env_instance, L)
-        )
-        y_w_tensor = (
-            self._init_w(env_instance, L)
-            if self.parameterize
-            else self._init_y(env_instance, L)
-        )
+        z_v_tensor = self._init_v(env, L) if self.parameterize else self._init_z(env, L)
+        y_w_tensor = self._init_w(env, L) if self.parameterize else self._init_y(env, L)
 
         c1, c2 = self.c1, self.c2
 
@@ -340,12 +330,10 @@ class MFOMO(Algorithm):
         soft_max = torch.nn.Softmax(dim=-1)
 
         if not self.parameterize:
-            pi = extract_policy_from_mean_field(
-                env_instance, L_u_tensor.clone().detach()
-            )
+            pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
         else:
             pi = extract_policy_from_mean_field(
-                env_instance,
+                env,
                 soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                     (T + 1,) + S + A
                 ),
@@ -353,13 +341,13 @@ class MFOMO(Algorithm):
 
         solutions = [pi]
         argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
+        scores = [exploitability_score(env, pi)]
         runtimes = [0.0]
 
         if verbose:
             _print_fancy_header(
                 alg_instance=self,
-                env_instance=env_instance,
+                env_instance=env,
                 max_iter=max_iter,
                 atol=atol,
                 rtol=rtol,
@@ -382,7 +370,7 @@ class MFOMO(Algorithm):
             # Residual Balancing
             if self.rb_freq and (n + 1) % self.rb_freq == 0:
                 c1, c2 = mf_omo_residual_balancing(
-                    env_instance,
+                    env,
                     L_u_tensor,
                     z_v_tensor,
                     y_w_tensor,
@@ -397,7 +385,7 @@ class MFOMO(Algorithm):
 
             # Update the parameters
             obj = mf_omo_obj(
-                env_instance,
+                env,
                 L_u_tensor,
                 z_v_tensor,
                 y_w_tensor,
@@ -419,23 +407,21 @@ class MFOMO(Algorithm):
                     L_u_tensor.data,
                     z_v_tensor.data,
                     y_w_tensor.data,
-                ) = mf_omo_constraints(env_instance, L_u_tensor, z_v_tensor, y_w_tensor)
+                ) = mf_omo_constraints(env, L_u_tensor, z_v_tensor, y_w_tensor)
 
             # Compute and store solution policy
             if not self.parameterize:
-                pi = extract_policy_from_mean_field(
-                    env_instance, L_u_tensor.clone().detach()
-                )
+                pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
             else:
                 pi = extract_policy_from_mean_field(
-                    env_instance,
+                    env,
                     soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                         (T + 1,) + S + A
                     ),
                 )
 
             solutions.append(pi.clone().detach())
-            scores.append(exploitability_score(env_instance, pi))
+            scores.append(exploitability_score(env, pi))
             if scores[n] < scores[argmin]:
                 argmin = n
             runtimes.append(time.time() - t)

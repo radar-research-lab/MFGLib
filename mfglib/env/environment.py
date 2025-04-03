@@ -5,6 +5,8 @@ from typing import Literal, Protocol
 
 import torch
 
+from mfglib.alg.utils import tuple_prod
+
 
 # By defining Protocols here, we allow a user to pass any object that implements
 # `__call__`. In particular, this allows a user to pass either a function or a class
@@ -74,11 +76,11 @@ class Environment:
 
     @property
     def n_actions(self) -> int:
-        return torch.tensor(self.A).prod().item()
+        return tuple_prod(self.A)
 
     @property
     def n_states(self) -> int:
-        return torch.tensor(self.S).prod().item()
+        return tuple_prod(self.S)
 
     @classmethod
     def beach_bar(

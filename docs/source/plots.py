@@ -97,7 +97,7 @@ def plot_mf_omo() -> None:
     for lr in lrs:
         opt = {"name": "Adam", "config": {"lr": lr}}
         _, expls, _ = MFOMO(optimizer=opt).solve(
-            env_instance=rock_paper_scissors,
+            env=rock_paper_scissors,
             max_iter=300,
             atol=None,
             rtol=None,

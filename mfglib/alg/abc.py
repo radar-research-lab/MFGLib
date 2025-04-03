@@ -60,11 +60,11 @@ class Algorithm(abc.ABC):
         self,
         env: Environment,
         *,
-        pi_0: Literal["uniform"] | torch.Tensor,
-        max_iter: int,
-        atol: float | None,
-        rtol: float | None,
-        verbose: int,
+        pi_0: Literal["uniform"] | torch.Tensor = ...,
+        max_iter: int = ...,
+        atol: float | None = ...,
+        rtol: float | None = ...,
+        verbose: int = ...,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         raise NotImplementedError
 
@@ -229,7 +229,7 @@ class Iterative(Algorithm, Generic[T]):
 
         for i in range(1, max_iter + 1):
             state = self.step_state(state)
-            pis += [state.pi_i]
+            pis += [state.pi]
             expls += [expl_score(env, pis[i])]
             rts += [time.time() - t_0]
             if expls[i] < expls[argmin]:

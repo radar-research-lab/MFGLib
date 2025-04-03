@@ -86,21 +86,21 @@ class OccupationMeasureInclusion(Algorithm):
 
     def solve(
         self,
-        env_instance: Environment,
+        env: Environment,
         *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
+        pi_0: Literal["uniform"] | torch.Tensor = "uniform",
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
 
         Args
         ----
-        env_instance
+        env
             An instance of a specific environment.
-        pi
+        pi_0
             A numpy array of size (T+1,)+S+A representing the initial policy.
             If 'uniform', the initial policy will be the uniform distribution.
         max_iter
@@ -112,17 +112,17 @@ class OccupationMeasureInclusion(Algorithm):
         verbose
             Print convergence information during iteration.
         """
-        pi = _ensure_free_tensor(pi, env_instance)
+        pi = _ensure_free_tensor(pi_0, env)
 
         solutions = [pi]
         argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
+        scores = [exploitability_score(env, pi)]
         runtimes = [0.0]
 
         if verbose:
             _print_fancy_header(
                 alg_instance=self,
-                env_instance=env_instance,
+                env_instance=env,
                 max_iter=max_iter,
                 atol=atol,
                 rtol=rtol,
@@ -141,23 +141,23 @@ class OccupationMeasureInclusion(Algorithm):
             return solutions, scores, runtimes
 
         # initialize d = L^pi
-        d = mean_field(env_instance, pi)
+        d = mean_field(env, pi)
         d_shape = list(d.shape)  # non-flattened shape of d
 
         t = time.time()
         for n in range(1, max_iter + 1):
             # obtain occupation-measure params
-            b, A_d, c_d = mf_omo_params(env_instance, d)
+            b, A_d, c_d = mf_omo_params(env, d)
 
             # Update d and pi
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
             d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
-            pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
+            pi = extract_policy_from_mean_field(env, d.clone().detach())
 
             solutions.append(
                 pi.clone().detach()
             )  # do we need to clone + detach again? no? same for MF-OMO？
-            scores.append(exploitability_score(env_instance, pi))
+            scores.append(exploitability_score(env, pi))
             if scores[n] < scores[argmin]:
                 argmin = n
             runtimes.append(time.time() - t)
