@@ -201,7 +201,6 @@ class Iterative(Algorithm, Generic[T]):
         pis = [pi_0]
         argmin = 0
         expls = [expl_score(env, pi_0)]
-        t_0 = time.time()
         rts = [0.0]
 
         state = self.init_state(env, pi_0)
@@ -227,6 +226,7 @@ class Iterative(Algorithm, Generic[T]):
             logger.flush_stopped()
             return pis, expls, rts
 
+        t_0 = time.time()
         for i in range(1, max_iter + 1):
             state = self.step_state(state)
             pis += [state.pi]

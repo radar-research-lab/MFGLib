@@ -8,7 +8,13 @@ from typing import Any, Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import (
+    DEFAULT_ATOL,
+    DEFAULT_MAX_ITER,
+    DEFAULT_RTOL,
+    Algorithm,
+    Logger,
+)
 from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
@@ -270,7 +276,7 @@ class MFOMO(Algorithm):
         return (
             f"MFOMO(loss={self.loss}, c1={self.c1}, c2={self.c2}, c3={self.c3}, "
             f"rb_freq={self.rb_freq}, m1={self.m1}, m2={self.m2}, m3={self.m3}, "
-            f"parameterize={self.parameterize})"
+            f"parameterize={self.parameterize}, hat_init={self.hat_init})"
         )
 
     def solve(
@@ -339,36 +345,49 @@ class MFOMO(Algorithm):
                 ),
             )
 
-        solutions = [pi]
+        pis = [pi]
         argmin = 0
-        scores = [exploitability_score(env, pi)]
-        runtimes = [0.0]
+        expls = [exploitability_score(env, pi)]
+        t_0 = time.time()
+        rts = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        logger = Logger(verbose)
+        logger.display_info(
+            env=env,
+            cls=f"{self.__class__.__name__}",
+            parameters={
+                "loss": self.loss,
+                "c1": self.c1,
+                "c2": self.c2,
+                "c3": self.c3,
+                "rb_freq": self.rb_freq,
+                "m1": self.m1,
+                "m2": self.m2,
+                "m3": self.m3,
+                "parameterize": self.parameterize,
+                "hat_init": self.hat_init,
+                "optimizer": self.optimizer["name"],
+            },
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+        )
+        logger.insert_row(
+            i=0,
+            expl=expls[0],
+            ratio=expls[0] / expls[0],
+            argmin=argmin,
+            elapsed=rts[0],
+        )
 
-        if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
-            return solutions, scores, runtimes
+        if _trigger_early_stopping(expls[0], expls[0], atol, rtol):
+            logger.flush_stopped()
+            return pis, expls, rts
 
-        t = time.time()
-        for n in range(1, max_iter + 1):
+        t_0 = time.time()
+        for i in range(1, max_iter + 1):
             # Residual Balancing
-            if self.rb_freq and (n + 1) % self.rb_freq == 0:
+            if self.rb_freq and (i + 1) % self.rb_freq == 0:
                 c1, c2 = mf_omo_residual_balancing(
                     env,
                     L_u_tensor,
@@ -420,30 +439,25 @@ class MFOMO(Algorithm):
                     ),
                 )
 
-            solutions.append(pi.clone().detach())
-            scores.append(exploitability_score(env, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
-            runtimes.append(time.time() - t)
+            pis.append(pi.clone().detach())
+            expls.append(exploitability_score(env, pi))
+            if expls[i] < expls[argmin]:
+                argmin = i
+            rts.append(time.time() - t_0)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            logger.insert_row(
+                i=i,
+                expl=expls[i],
+                ratio=expls[i] / expls[0],
+                argmin=argmin,
+                elapsed=rts[i],
+            )
+            if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                logger.flush_stopped()
+                return pis, expls, rts
 
-            if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
-                return solutions, scores, runtimes
-
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
-        return solutions, scores, runtimes
+        logger.flush_exhausted()
+        return pis, expls, rts
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
