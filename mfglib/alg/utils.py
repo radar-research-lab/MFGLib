@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import warnings
 from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import Literal, TypeVar
 
 import torch
 
-from mfglib import __version__
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
-
-if TYPE_CHECKING:
-    from mfglib.alg.abc import Algorithm
 
 T = TypeVar("T", int, float)
 
@@ -19,55 +15,6 @@ T = TypeVar("T", int, float)
 def tuple_prod(tup: tuple[T, ...]) -> T:
     """Compute product of the elements in a tuple."""
     return reduce(lambda x, y: x * y, tup)
-
-
-HEADER = "| iter |  expl_n  | expl_n / expl_0 | argmin_{0..n} expl_i | time (s) |"
-
-
-def _print_fancy_header(
-    *,
-    alg_instance: Algorithm,
-    env_instance: Environment,
-    max_iter: int,
-    atol: float | None,
-    rtol: float | None,
-) -> None:
-    title = f"MFGLib v{__version__} : A Library for Mean-Field Games"
-    print("=" * len(HEADER))
-    print(f"{title:^{len(HEADER)}}")
-    print(f"{'(c) RADAR Research Lab, UC Berkeley':^{len(HEADER)}}")
-    print("=" * len(HEADER))
-    print()
-    print("Environment summary:")
-    print(f"\tS={env_instance.S}")
-    print(f"\tA{env_instance.A}")
-    print(f"\tT={env_instance.T}")
-    print(f"\tr_max={env_instance.r_max}")
-    print()
-    print("Algorithm summary:")
-    print(f"\t{alg_instance}")
-    print(f"\t{atol=}")
-    print(f"\t{rtol=}")
-    print(f"\t{max_iter=}")
-    print()
-    print("-" * len(HEADER))
-    print(HEADER)
-    print("-" * len(HEADER))
-
-
-def _print_fancy_table_row(
-    *, n: int, score_n: float, score_0: float, argmin: int, runtime_n: float
-) -> None:
-    print(
-        f"|{n:^6}|{score_n:^10.5f}|{score_n / score_0:^17.5f}"
-        f"|{argmin:^22}|{runtime_n:^10.3f}|"
-    )
-
-
-def _print_solve_complete(*, seconds_elapsed: float) -> None:
-    print("-" * len(HEADER))
-    print()
-    print(f"Solve complete ({seconds_elapsed:.3f} seconds)")
 
 
 def _ensure_free_tensor(

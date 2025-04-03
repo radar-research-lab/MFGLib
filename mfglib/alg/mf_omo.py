@@ -20,9 +20,6 @@ from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
 from mfglib.alg.utils import (
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
     hat_initialization,
@@ -348,7 +345,6 @@ class MFOMO(Algorithm):
         pis = [pi]
         argmin = 0
         expls = [exploitability_score(env, pi)]
-        t_0 = time.time()
         rts = [0.0]
 
         logger = Logger(verbose)
