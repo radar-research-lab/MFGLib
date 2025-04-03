@@ -26,7 +26,7 @@ def plot_fictitious_play() -> None:
     rock_paper_scissors = Environment.rock_paper_scissors()
     for alpha in [0.1, 0.5, 0.75, None]:
         _, expls, _ = FictitiousPlay(alpha=alpha).solve(
-            env_instance=rock_paper_scissors,
+            env=rock_paper_scissors,
             max_iter=300,
             atol=None,
             rtol=None,
@@ -47,7 +47,7 @@ def plot_online_mirror_descent() -> None:
     rock_paper_scissors = Environment.rock_paper_scissors()
     for alpha in [0.01, 0.1, 1.0, 10]:
         _, expls, _ = OnlineMirrorDescent(alpha=alpha).solve(
-            env_instance=rock_paper_scissors,
+            env=rock_paper_scissors,
             max_iter=300,
             atol=None,
             rtol=None,
@@ -72,7 +72,7 @@ def plot_prior_descent() -> None:
 
     for eta, n_inner in zip(eta_values, n_inner_values):
         _, expls, _ = PriorDescent(eta=eta, n_inner=n_inner).solve(
-            env_instance=rock_paper_scissors,
+            env=rock_paper_scissors,
             max_iter=300,
             atol=None,
             rtol=None,

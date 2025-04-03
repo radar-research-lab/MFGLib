@@ -11,7 +11,7 @@ from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
-@dataclass(kw_only=True)
+@dataclass
 class State:
     i: int
     env: Environment
@@ -62,7 +62,7 @@ class FictitiousPlay(Iterative[State]):
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(i=0, env=env, pi=pi_0)
 
-    def step_state(self, state: State) -> State:
+    def step_next_state(self, state: State) -> State:
         L = mean_field(state.env, state.pi)
         pi_br = Greedy_Policy(state.env, L)
         L_br = mean_field(state.env, pi_br)

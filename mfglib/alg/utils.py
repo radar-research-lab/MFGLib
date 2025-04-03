@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import warnings
 from functools import reduce
-from typing import Literal, TypeVar
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import torch
 
 from mfglib.alg.q_fn import QFn
-from mfglib.env import Environment
+
+if TYPE_CHECKING:
+    from mfglib.env import Environment
 
 T = TypeVar("T", int, float)
 

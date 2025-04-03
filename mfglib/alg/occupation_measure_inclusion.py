@@ -46,7 +46,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     return sol
 
 
-@dataclass(kw_only=True)
+@dataclass
 class State:
     env: Environment
     pi: torch.Tensor
@@ -86,7 +86,7 @@ class OccupationMeasureInclusion(Iterative[State]):
         d = mean_field(env, pi_0)
         return State(env=env, pi=pi_0, d=d)
 
-    def step_state(self, state: State) -> State:
+    def step_next_state(self, state: State) -> State:
         d = state.d
         d_shape = list(d.shape)
         b, A_d, c_d = mf_omo_params(state.env, d)

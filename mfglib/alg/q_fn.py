@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import torch
 
-from mfglib.env import Environment
+if TYPE_CHECKING:
+    from mfglib.env import Environment
 
 
 class QFn:
