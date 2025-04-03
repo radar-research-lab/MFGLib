@@ -3,7 +3,6 @@ import torch
 from torch.testing import assert_close
 
 from mfglib.alg.q_fn import QFn
-from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
 
 
@@ -21,8 +20,8 @@ def test_q_function(env: Environment) -> None:
     """Primarily a property-based test."""
     size = (env.T + 1, *env.S, *env.A)
 
-    L = torch.ones(size=size) / tuple_prod(env.S + env.A)
-    pi = torch.ones(size=size) / tuple_prod(env.A)
+    L = torch.ones(size=size) / env.n_states / env.n_actions
+    pi = torch.ones(size=size) / env.n_actions
 
     optimal = QFn(env, L).optimal()
     assert optimal.size() == torch.Size(size)

@@ -1,22 +1,15 @@
 from __future__ import annotations
 
 import warnings
-from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import TYPE_CHECKING, Literal
 
+import numpy as np
 import torch
 
 from mfglib.alg.q_fn import QFn
 
 if TYPE_CHECKING:
     from mfglib.env import Environment
-
-T = TypeVar("T", int, float)
-
-
-def tuple_prod(tup: tuple[T, ...]) -> T:
-    """Compute product of the elements in a tuple."""
-    return reduce(lambda x, y: x * y, tup)
 
 
 def _ensure_free_tensor(
@@ -100,7 +93,7 @@ def extract_policy_from_mean_field(
     # Auxiliary variables
     l_s = len(S)
     l_a = len(A)
-    n_a = tuple_prod(A)
+    n_a = np.prod(A).item()
     ones_ts = (1,) * (l_s + 1)
     ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
 
@@ -130,8 +123,8 @@ def hat_initialization(
     r_max = env_instance.r_max
 
     # Auxiliary parameters
-    n_s = tuple_prod(S)
-    n_a = tuple_prod(A)
+    n_s = np.prod(S).item()
+    n_a = np.prod(A).item()
     l_a, l_s = len(A), len(S)
     ones_s = (1,) * l_s
     as_to_sa = tuple(range(l_a, l_a + l_s)) + tuple(range(l_a))

@@ -23,7 +23,6 @@ from mfglib.alg.utils import (
     _trigger_early_stopping,
     extract_policy_from_mean_field,
     hat_initialization,
-    tuple_prod,
 )
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score
@@ -207,14 +206,14 @@ class MFOMO(Algorithm):
 
     def _init_L(self, env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
         if self._L_or_u is None:
-            return pi / tuple_prod(env_instance.S)
+            return pi / env_instance.n_states
         else:
             return self._L_or_u
 
     def _init_u(self, env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
         # following pi(a|s)=L(s,a)/mu(s), this mean-field yields policy pi_np
         if self._L_or_u is None:
-            L = pi / tuple_prod(env_instance.S)
+            L = pi / env_instance.n_states
             if (L == 0).any():
                 raise ValueError("zero value encountered; unable to take log")
             return torch.log(L)
@@ -224,8 +223,8 @@ class MFOMO(Algorithm):
     def _init_z(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._z_or_v is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
-            n_a = tuple_prod(env_instance.A)
+            n_s = env_instance.n_states
+            n_a = env_instance.n_actions
             if self.hat_init:
                 z_hat, _ = hat_initialization(env_instance, L, self.parameterize)
                 return z_hat  # type: ignore[return-value]
@@ -236,8 +235,8 @@ class MFOMO(Algorithm):
     def _init_v(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._z_or_v is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
-            n_a = tuple_prod(env_instance.A)
+            n_s = env_instance.n_states
+            n_a = env_instance.n_actions
             if self.hat_init:
                 v_hat, _ = hat_initialization(env_instance, L, self.parameterize)
                 if v_hat is not None:
@@ -249,7 +248,7 @@ class MFOMO(Algorithm):
     def _init_y(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._y_or_w is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
+            n_s = env_instance.n_states
             if self.hat_init:
                 _, y_hat = hat_initialization(env_instance, L, self.parameterize)
                 return y_hat
@@ -260,7 +259,7 @@ class MFOMO(Algorithm):
     def _init_w(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._y_or_w is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
+            n_s = env_instance.n_states
             if self.hat_init:
                 _, w_hat = hat_initialization(env_instance, L, self.parameterize)
                 return w_hat

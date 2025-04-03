@@ -3,9 +3,8 @@ from __future__ import annotations
 import math
 from typing import Literal, Protocol
 
+import numpy as np
 import torch
-
-from mfglib.alg.utils import tuple_prod
 
 
 # By defining Protocols here, we allow a user to pass any object that implements
@@ -76,11 +75,11 @@ class Environment:
 
     @property
     def n_actions(self) -> int:
-        return tuple_prod(self.A)
+        return np.prod(self.A).item()
 
     @property
     def n_states(self) -> int:
-        return tuple_prod(self.S)
+        return np.prod(self.S).item()
 
     @classmethod
     def beach_bar(
