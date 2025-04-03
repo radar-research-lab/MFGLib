@@ -72,6 +72,10 @@ class Environment:
     def prob(self, t: int, L_t: torch.Tensor) -> torch.Tensor:
         return self.transition_fn(self, t, L_t)
 
+    @property
+    def n_actions(self) -> int:
+        return torch.tensor(self.A).prod().item()
+
     @classmethod
     def beach_bar(
         cls,

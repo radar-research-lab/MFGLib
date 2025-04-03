@@ -2,21 +2,49 @@ from __future__ import annotations
 
 import abc
 import json
+import time
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Iterable, Literal, Sequence, TypedDict, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Final,
+    Generic,
+    Iterable,
+    Literal,
+    Sequence,
+    TypedDict,
+    TypeVar,
+)
 
 import optuna
 import torch
 from optuna.exceptions import ExperimentalWarning
 from optuna.samplers import PartialFixedSampler
+from rich import box
+from rich import print as rich_print
+from rich.console import Group
+from rich.panel import Panel
+from rich.pretty import pretty_repr
+from rich.table import Table
+from rich.text import Text
 
+from mfglib import __version__
+from mfglib.alg.utils import _trigger_early_stopping
 from mfglib.env import Environment
+from mfglib.scoring import exploitability_score as expl_score
 
 if TYPE_CHECKING:
     from mfglib.tuning import Metric
 
+
+class State(abc.ABC):
+    @abc.abstractmethod
+    def current_policy(self) -> torch.Tensor:
+        raise NotImplementedError
+
+
 Self = TypeVar("Self", bound="Algorithm")
+T = TypeVar("T", bound="State")
 
 DEFAULT_MAX_ITER: Final = 100
 DEFAULT_ATOL: Final = 1e-3
@@ -30,21 +58,80 @@ class SolveKwargs(TypedDict, total=False):
     verbose: bool
 
 
-class Algorithm(abc.ABC):
+class Algorithm(abc.ABC, Generic[T]):
     """Abstract interface for all algorithms."""
 
-    @abc.abstractmethod
     def solve(
         self,
-        env_instance: Environment,
+        env: Environment,
         *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
+        pi_0: Literal["uniform"] | torch.Tensor = "uniform",
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
+        verbose: int = 0,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
-        """Run the algorithm and solve for a Nash-Equilibrium policy."""
+        if pi_0 == "uniform":
+            pi_0 = torch.ones((env.T + 1,) + env.S + env.A) / env.n_actions
+        elif isinstance(pi_0, torch.Tensor):
+            pi_0 = pi_0.detach().clone()
+        else:
+            raise TypeError("invalid pi_0 provided")
+
+        pis = [pi_0]
+        argmin = 0
+        expls = [expl_score(env, pi_0)]
+        t_0 = time.time()
+        rts = [0.0]
+
+        state = self.init_state(pi_0)
+
+        logger = Logger(verbose)
+        logger.display_info(env=env, alg=self, atol=atol, rtol=rtol, max_iter=max_iter)
+        logger.insert_row(
+            i=0,
+            expl=expls[0],
+            ratio=expls[0] / expls[0],
+            argmin=argmin,
+            elapsed=rts[0],
+        )
+
+        if _trigger_early_stopping(expls[0], expls[0], atol, rtol):
+            logger.flush_stopped()
+            return pis, expls, rts
+
+        for i in range(1, max_iter + 1):
+            state = self.step_state(state)
+            pis += [state.current_policy()]
+            expls += expl_score(env, pis[i])
+            rts += [time.time() - t_0]
+            if expls[i] < expls[argmin]:
+                argmin = i
+            logger.insert_row(
+                i=i,
+                expl=expls[i],
+                ratio=expls[i] / expls[0],
+                argmin=argmin,
+                elapsed=rts[i],
+            )
+            if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                logger.flush_stopped()
+                return pis, expls, rts
+
+        logger.flush_exhausted()
+        return pis, expls, rts
+
+    @abc.abstractmethod
+    def init_state(self, pi_0: torch.Tensor) -> T:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def step_state(self, state: T) -> T:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    @property
+    def parameters(self) -> dict[str, float | str]:
         raise NotImplementedError
 
     def save(self, path: Path | str) -> None:
@@ -149,3 +236,113 @@ class Algorithm(abc.ABC):
             study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
         return study
+
+
+class Logger:
+    INFO_PANEL_WIDTH: Final = 61
+    MAX_TABLE_LENGTH: Final = 50
+
+    def __init__(self, verbose: int) -> None:
+        self.verbose = verbose
+        self.table = self.create_empty_table()
+
+    @staticmethod
+    def create_empty_table() -> Table:
+        return Table(
+            "Iter (n)",
+            "Expl_n",
+            "Ratio_n",
+            "Argmin_n",
+            "Elapsed_n",
+        )
+
+    def display_info(
+        self,
+        env: Environment,
+        alg: Algorithm,
+        atol: float | None,
+        rtol: float | None,
+        max_iter: int,
+    ) -> None:
+        if self.verbose:
+            top_group = Group(
+                Text(
+                    f"MFGLib v{__version__} : A Library for Mean-Field Games",
+                    justify="center",
+                    style="bold",
+                ),
+                Text("RADAR Research Lab, UC Berkeley", justify="center"),
+            )
+            top_panel = Panel(
+                top_group, box=box.HEAVY, width=self.INFO_PANEL_WIDTH, padding=1
+            )
+
+            env_group = Group(
+                f"S = {env.S}",
+                f"A = {env.A}",
+                f"T = {env.T}",
+                f"r_max = {env.r_max}",
+            )
+            env_panel = Panel(
+                env_group,
+                title=Text("Environment Summary", style="bold"),
+                width=self.INFO_PANEL_WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+
+            alg_group = Group(
+                f"class = {alg.__class__.__name__}",
+                f"parameters = {pretty_repr(alg.parameters)}",
+                f"atol = {atol}",
+                f"rtol = {rtol}",
+                f"max_iter = {max_iter}",
+            )
+            alg_panel = Panel(
+                alg_group,
+                title=Text("Algorithm Summary", style="bold"),
+                width=self.INFO_PANEL_WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+
+            doc_group = Group(
+                f"- The verbosity level is set to {self.verbose}.",
+                "- Table output is printed 50 rows at a time.",
+                "- Ratio_n := Expl_n / Expl_0.",
+                "- Argmin_n := Argmin_{0≤i≤n} Expl_i.",
+                "- Elapsed_n measures time in seconds.",
+            )
+            doc_panel = Panel(
+                doc_group,
+                title=Text("Documentation", style="bold"),
+                width=self.INFO_PANEL_WIDTH,
+                title_align="left",
+                box=box.SQUARE,
+            )
+            rich_print(top_panel, env_panel, alg_panel, doc_panel)
+
+    def insert_row(
+        self, i: int, expl: float, ratio: float, argmin: int, elapsed: float
+    ) -> None:
+        if self.verbose and i % self.verbose == 0:
+            self.table.add_row(
+                f"{i}",
+                f"{expl:.4e}",
+                f"{ratio:.4e}",
+                f"{argmin}",
+                f"{elapsed:.2e}",
+            )
+            if len(self.table.rows) == self.MAX_TABLE_LENGTH:
+                rich_print(self.table)
+                self.table = self.create_empty_table()
+
+    def flush_exhausted(self) -> None:
+        if self.verbose:
+            rich_print(self.table)
+            rich_print("Number of iterations exhausted.")
+
+    def flush_stopped(self) -> None:
+        if self.verbose:
+            rich_print(self.table)
+            rich_print("Absolute or relative stopping criteria met.")

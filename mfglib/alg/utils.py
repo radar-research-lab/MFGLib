@@ -92,7 +92,6 @@ def _trigger_early_stopping(
     if atol or rtol:
         atolv = 0.0 if atol is None else atol
         rtolv = 0.0 if rtol is None else rtol
-
         return score_n <= atolv + rtolv * score_0
     else:
         return False
