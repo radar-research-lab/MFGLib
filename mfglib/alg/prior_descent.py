@@ -3,13 +3,27 @@ from __future__ import annotations
 import optuna
 import torch
 
-from mfglib.alg.abc import Algorithm, State
+from mfglib.alg.abc import Iterative
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
-class PriorDescent(Algorithm["PriorDescent.State"]):
+class State:
+    def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
+        self.env = env
+        self.pi_i = pi_0
+        self.i = 0
+        self.q = pi_0.clone()
+
+    def next(self, pi_i: torch.Tensor, q: torch.Tensor) -> State:
+        self.i += 1
+        self.pi_i = pi_i
+        self.q = q
+        return self
+
+
+class PriorDescent(Iterative[State]):
     """Prior Descent algorithm.
 
     Notes
@@ -50,23 +64,10 @@ class PriorDescent(Algorithm["PriorDescent.State"]):
         """Represent algorithm instance and associated parameters with a string."""
         return f"PriorDescent(eta={self.eta}, n_inner={self.n_inner})"
 
-    class State(State):
-        def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-            super().__init__(pi_i=pi_0)
-            self.env = env
-            self.i = 0
-            self.q = pi_0.clone()
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
+        return State(env=env, pi_0=pi_0)
 
-        def next(self, pi_i: torch.Tensor, q: torch.Tensor) -> PriorDescent.State:
-            self.i += 1
-            self.pi_i = pi_i
-            self.q = q
-            return self
-
-    def init_state(self, env: Environment, pi_0: torch.Tensor) -> PriorDescent.State:
-        return self.State(env=env, pi_0=pi_0)
-
-    def step_state(self, state: PriorDescent.State) -> PriorDescent.State:
+    def step_state(self, state: State) -> State:
         L = mean_field(state.env, state.pi_i)
         Q = QFn(state.env, L, verify_integrity=False).optimal() / self.eta
         vals = (state.q * Q.exp()).flatten(start_dim=1 + len(state.env.S))

@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-import dataclasses
-
 import optuna
 import torch
 
-import mfglib.alg.abc
-from mfglib.alg.abc import Algorithm
+from mfglib.alg.abc import Iterative
 from mfglib.alg.greedy_policy_given_mean_field import Greedy_Policy
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
-@dataclasses.dataclass
-class State(mfglib.alg.abc.State):
+class State:
     def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-        super().__init__(pi_i=pi_0)
         self.env = env
+        self.pi_i = pi_0
         self.i = 0
 
     def next(self, pi_i: torch.Tensor) -> State:
@@ -25,7 +21,7 @@ class State(mfglib.alg.abc.State):
         return self
 
 
-class FictitiousPlay(Algorithm[State]):
+class FictitiousPlay(Iterative[State]):
     """Fictitious Play algorithm.
 
     Notes

@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-import dataclasses
-
 import optuna
 import torch
 
-import mfglib
-from mfglib.alg.abc import Algorithm
+from mfglib.alg.abc import Iterative
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
-@dataclasses.dataclass
-class State(mfglib.alg.abc.State):
+class State:
     def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
-        super().__init__(pi_i=pi_0)
         self.env = env
+        self.pi_i = pi_0
         self.y = torch.zeros(env.T + 1, *env.S, *env.A)
 
     def next(self, pi_i: torch.Tensor) -> State:
@@ -24,7 +20,7 @@ class State(mfglib.alg.abc.State):
         return self
 
 
-class OnlineMirrorDescent(Algorithm[State]):
+class OnlineMirrorDescent(Iterative[State]):
     """Online Mirror Descent algorithm.
 
     Notes

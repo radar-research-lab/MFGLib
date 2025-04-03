@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import abc
-import dataclasses
 import json
 import time
 import warnings
@@ -12,6 +11,7 @@ from typing import (
     Generic,
     Iterable,
     Literal,
+    Protocol,
     Sequence,
     TypedDict,
     TypeVar,
@@ -38,13 +38,7 @@ if TYPE_CHECKING:
     from mfglib.tuning import Metric
 
 
-@dataclasses.dataclass
-class State:
-    pi_i: torch.Tensor
-
-
 Self = TypeVar("Self", bound="Algorithm")
-T = TypeVar("T", bound="State")
 
 DEFAULT_MAX_ITER: Final = 100
 DEFAULT_ATOL: Final = 1e-3
@@ -58,8 +52,134 @@ class SolveKwargs(TypedDict, total=False):
     verbose: bool
 
 
-class Algorithm(abc.ABC, Generic[T]):
+class Algorithm(abc.ABC):
     """Abstract interface for all algorithms."""
+
+    @abc.abstractmethod
+    def solve(
+        self,
+        env: Environment,
+        *,
+        pi_0: Literal["uniform"] | torch.Tensor,
+        max_iter: int,
+        atol: float | None,
+        rtol: float | None,
+        verbose: int,
+    ) -> tuple[list[torch.Tensor], list[float], list[float]]:
+        raise NotImplementedError
+
+    def save(self, path: Path | str) -> None:
+        path = Path(path) / self.__class__.__name__
+        path.mkdir(exist_ok=False)
+        with open(path / "kwargs.json", "w") as f:
+            json.dump(self.__dict__, f, indent=4)
+
+    @classmethod
+    def load(cls: type[Self], path: Path | str) -> Self:
+        path = Path(path) / cls.__name__
+        with open(path / "kwargs.json", "r") as f:
+            kwargs = json.load(f)
+        return cls(**kwargs)
+
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        """Represent algorithm instance and associated parameters with a string."""
+        raise NotImplementedError
+
+    @classmethod
+    @abc.abstractmethod
+    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
+        raise NotImplementedError
+
+    def tune(
+        self,
+        metric: Metric,
+        envs: Sequence[Environment],
+        pi_0s: Sequence[torch.Tensor] | Literal["uniform"] = "uniform",
+        solve_kwargs: SolveKwargs | None = None,
+        sampler: optuna.samplers.BaseSampler | None = None,
+        frozen_attrs: Iterable[str] | None = None,
+        n_trials: int | None = None,
+        timeout: float | None = None,
+    ) -> optuna.Study:
+        """Tune the algorithm over multiple environment/initialization pairs.
+
+        Args
+        ----
+            metric
+                Objective function to minimizer.
+            envs
+                List of environment targets.
+            pi_0s
+                Policy initializations. ``envs`` and ``pi_0s`` are "zipped" together when
+                computing the metrics.
+            solve_kwargs
+                Additional keyword arguments passed to the solver.
+            sampler
+                The sampler used to explore the search space of the optimization.
+                If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
+                used. The sampler guides how different hyperparameter trials are
+                selected.
+            frozen_attrs
+                A list of attributes that should be frozen (i.e., fixed) during the
+                optimization process. These attributes will not be considered for
+                optimization, and their values will be taken directly from the instance
+                of the class.
+            n_trials
+                The  number of trials to run. Refer to ``optuna`` documentation for
+                further details on the handling of ``None``.
+            timeout
+                Stop study after the given number of second(s). Refer to ``optuna``
+                documentation for further details.
+
+        Returns
+        -------
+        optuna.Study
+            The result of the hyperparameter tuning process.
+
+        """
+        if sampler is None:
+            sampler = optuna.samplers.TPESampler()
+
+        solve_kwargs = solve_kwargs or {}
+
+        fixed_params = {}
+        for attr in frozen_attrs or []:
+            if hasattr(self, attr):
+                fixed_params[attr] = getattr(self, attr)
+
+        def objective(trial: optuna.Trial) -> float:
+            solver = self._init_tuner_instance(trial)
+            pis, expls, rts = [], [], []
+            for i, env in enumerate(envs):
+                if pi_0s == "uniform":
+                    pi_0: Literal["uniform"] | torch.Tensor = "uniform"
+                else:
+                    pi_0 = pi_0s[i]
+                pi, expl, rt = solver.solve(env, pi_0=pi_0, **solve_kwargs)
+                pis += [pi]
+                expls += [expl]
+                rts += [rt]
+            return metric.evaluate(pis, expls, rts, solve_kwargs)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ExperimentalWarning)
+            study = optuna.create_study(
+                sampler=PartialFixedSampler(fixed_params, sampler)
+            )
+            study.optimize(objective, n_trials=n_trials, timeout=timeout)
+
+        return study
+
+
+class State(Protocol):
+    pi_i: torch.Tensor
+
+
+T = TypeVar("T", bound=State)
+
+
+class Iterative(Algorithm, Generic[T]):
 
     def solve(
         self,
@@ -87,7 +207,14 @@ class Algorithm(abc.ABC, Generic[T]):
         state = self.init_state(env, pi_0)
 
         logger = Logger(verbose)
-        logger.display_info(env=env, alg=self, atol=atol, rtol=rtol, max_iter=max_iter)
+        logger.display_info(
+            env=env,
+            cls=f"{self.__class__.__name__}",
+            parameters=self.parameters,
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+        )
         logger.insert_row(
             i=0,
             expl=expls[0],
@@ -134,109 +261,6 @@ class Algorithm(abc.ABC, Generic[T]):
     def parameters(self) -> dict[str, float | str | None]:
         raise NotImplementedError
 
-    def save(self, path: Path | str) -> None:
-        path = Path(path) / self.__class__.__name__
-        path.mkdir(exist_ok=False)
-        with open(path / "kwargs.json", "w") as f:
-            json.dump(self.__dict__, f, indent=4)
-
-    @classmethod
-    def load(cls: type[Self], path: Path | str) -> Self:
-        path = Path(path) / cls.__name__
-        with open(path / "kwargs.json", "r") as f:
-            kwargs = json.load(f)
-        return cls(**kwargs)
-
-    @abc.abstractmethod
-    def __str__(self) -> str:
-        """Represent algorithm instance and associated parameters with a string."""
-        raise NotImplementedError
-
-    @classmethod
-    @abc.abstractmethod
-    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
-        raise NotImplementedError
-
-    def tune(
-        self,
-        metric: Metric,
-        envs: Sequence[Environment],
-        pi0s: Sequence[torch.Tensor] | Literal["uniform"] = "uniform",
-        solve_kwargs: SolveKwargs | None = None,
-        sampler: optuna.samplers.BaseSampler | None = None,
-        frozen_attrs: Iterable[str] | None = None,
-        n_trials: int | None = None,
-        timeout: float | None = None,
-    ) -> optuna.Study:
-        """Tune the algorithm over multiple environment/initialization pairs.
-
-        Args
-        ----
-            metric
-                Objective function to minimizer.
-            envs
-                List of environment targets.
-            pi0s
-                Policy initializations. ``envs`` and ``pi0s`` are "zipped" together when
-                computing the metrics.
-            solve_kwargs
-                Additional keyword arguments passed to the solver.
-            sampler
-                The sampler used to explore the search space of the optimization.
-                If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
-                used. The sampler guides how different hyperparameter trials are
-                selected.
-            frozen_attrs
-                A list of attributes that should be frozen (i.e., fixed) during the
-                optimization process. These attributes will not be considered for
-                optimization, and their values will be taken directly from the instance
-                of the class.
-            n_trials
-                The  number of trials to run. Refer to ``optuna`` documentation for
-                further details on the handling of ``None``.
-            timeout
-                Stop study after the given number of second(s). Refer to ``optuna``
-                documentation for further details.
-
-        Returns
-        -------
-        optuna.Study
-            The result of the hyperparameter tuning process.
-
-        """
-        if sampler is None:
-            sampler = optuna.samplers.TPESampler()
-
-        solve_kwargs = solve_kwargs or {}
-
-        fixed_params = {}
-        for attr in frozen_attrs or []:
-            if hasattr(self, attr):
-                fixed_params[attr] = getattr(self, attr)
-
-        def objective(trial: optuna.Trial) -> float:
-            solver = self._init_tuner_instance(trial)
-            pis, expls, rts = [], [], []
-            for i, env in enumerate(envs):
-                if pi0s == "uniform":
-                    pi0: Literal["uniform"] | torch.Tensor = "uniform"
-                else:
-                    pi0 = pi0s[i]
-                pi, expl, rt = solver.solve(env, pi=pi0, **solve_kwargs)
-                pis += [pi]
-                expls += [expl]
-                rts += [rt]
-            return metric.evaluate(pis, expls, rts, solve_kwargs)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=ExperimentalWarning)
-            study = optuna.create_study(
-                sampler=PartialFixedSampler(fixed_params, sampler)
-            )
-            study.optimize(objective, n_trials=n_trials, timeout=timeout)
-
-        return study
-
 
 class Logger:
     INFO_PANEL_WIDTH: Final = 61
@@ -259,7 +283,8 @@ class Logger:
     def display_info(
         self,
         env: Environment,
-        alg: Algorithm,
+        cls: str,
+        parameters: dict[str, float | str | None],
         atol: float | None,
         rtol: float | None,
         max_iter: int,
@@ -292,8 +317,8 @@ class Logger:
             )
 
             alg_group = Group(
-                f"class = {alg.__class__.__name__}",
-                f"parameters = {pretty_repr(alg.parameters)}",
+                f"class = {cls}",
+                f"parameters = {pretty_repr(parameters)}",
                 f"atol = {atol}",
                 f"rtol = {rtol}",
                 f"max_iter = {max_iter}",
