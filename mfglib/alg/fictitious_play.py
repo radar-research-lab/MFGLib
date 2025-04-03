@@ -89,7 +89,7 @@ class FictitiousPlay(Algorithm[State]):
         return state.next(pi_i)
 
     @property
-    def parameters(self) -> dict[str, float | str]:
+    def parameters(self) -> dict[str, float | str | None]:
         return {"alpha": self.alpha}
 
     @classmethod

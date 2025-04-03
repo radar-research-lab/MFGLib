@@ -1,26 +1,15 @@
 from __future__ import annotations
 
-import time
-from typing import Literal
-
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import Algorithm, State
 from mfglib.alg.q_fn import QFn
-from mfglib.alg.utils import (
-    _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
-    _trigger_early_stopping,
-)
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.scoring import exploitability_score
 
 
-class PriorDescent(Algorithm):
+class PriorDescent(Algorithm["PriorDescent.State"]):
     """Prior Descent algorithm.
 
     Notes
@@ -61,118 +50,38 @@ class PriorDescent(Algorithm):
         """Represent algorithm instance and associated parameters with a string."""
         return f"PriorDescent(eta={self.eta}, n_inner={self.n_inner})"
 
-    def solve(
-        self,
-        env_instance: Environment,
-        *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
-        max_iter: int = DEFAULT_MAX_ITER,
-        atol: float | None = DEFAULT_ATOL,
-        rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
-    ) -> tuple[list[torch.Tensor], list[float], list[float]]:
-        """Run the algorithm and solve for a Nash-Equilibrium policy.
+    class State(State):
+        def __init__(self, env: Environment, pi_0: torch.Tensor) -> None:
+            super().__init__(pi_i=pi_0)
+            self.env = env
+            self.i = 0
+            self.q = pi_0.clone()
 
-        Args
-        ----
-        env_instance
-            An instance of a specific environment.
-        pi
-            A numpy array of size (T+1,)+S+A representing the initial policy. If
-            'uniform', the initial policy will be the uniform distribution.
-        max_iter
-            Maximum number of iterations to run.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        verbose
-            Print convergence information during iteration.
-        """
-        S = env_instance.S
-        A = env_instance.A
+        def next(self, pi_i: torch.Tensor, q: torch.Tensor) -> PriorDescent.State:
+            self.i += 1
+            self.pi_i = pi_i
+            self.q = q
+            return self
 
-        l_s = len(S)
-        l_a = len(A)
-        ones_ts = (1,) * (1 + l_s)
-        ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> PriorDescent.State:
+        return self.State(env=env, pi_0=pi_0)
 
-        pi = _ensure_free_tensor(pi, env_instance)
-        q = pi.clone()
+    def step_state(self, state: PriorDescent.State) -> PriorDescent.State:
+        L = mean_field(state.env, state.pi_i)
+        Q = QFn(state.env, L, verify_integrity=False).optimal() / self.eta
+        vals = (state.q * Q.exp()).flatten(start_dim=1 + len(state.env.S))
+        pi_i = torch.softmax(vals, dim=-1).reshape(
+            state.env.T + 1, *state.env.S, *state.env.A
+        )
+        if self.n_inner and (state.i + 1) % self.n_inner == 0:
+            q = pi_i.clone()
+        else:
+            q = state.q
+        return state.next(pi_i=pi_i, q=q)
 
-        solutions = [pi]
-        argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
-        runtimes = [0.0]
-
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
-
-        if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
-            return solutions, scores, runtimes
-
-        t = time.time()
-        for n in range(1, max_iter + 1):
-            # Mean-field corresponding to the policy
-            L = mean_field(env_instance, pi)
-
-            # Q-function corresponding to the mean-field
-            Q = QFn(env_instance, L, verify_integrity=False).optimal() / self.eta
-
-            # Compute the next policy
-            Q_exp = torch.exp(Q)
-            q_Q_exp = q.mul(Q_exp)
-            q_Q_exp_sum_rptd = (
-                q_Q_exp.flatten(start_dim=1 + l_s)
-                .sum(-1)
-                .repeat(A + ones_ts)
-                .permute(ats_to_tsa)
-            )
-            pi = q_Q_exp.div(q_Q_exp_sum_rptd)
-
-            # Update the prior
-            if self.n_inner and (n + 1) % self.n_inner == 0:
-                q = pi.clone()
-
-            solutions.append(pi.clone().detach())
-            scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
-            runtimes.append(time.time() - t)
-
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
-
-            if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
-                return solutions, scores, runtimes
-
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
-        return solutions, scores, runtimes
+    @property
+    def parameters(self) -> dict[str, float | str | None]:
+        return {"eta": self.eta, "n_inner": self.n_inner}
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> PriorDescent:

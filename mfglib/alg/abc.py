@@ -103,7 +103,7 @@ class Algorithm(abc.ABC, Generic[T]):
         for i in range(1, max_iter + 1):
             state = self.step_state(state)
             pis += [state.pi_i]
-            expls += expl_score(env, pis[i])
+            expls += [expl_score(env, pis[i])]
             rts += [time.time() - t_0]
             if expls[i] < expls[argmin]:
                 argmin = i
@@ -131,7 +131,7 @@ class Algorithm(abc.ABC, Generic[T]):
 
     @abc.abstractmethod
     @property
-    def parameters(self) -> dict[str, float | str]:
+    def parameters(self) -> dict[str, float | str | None]:
         raise NotImplementedError
 
     def save(self, path: Path | str) -> None:
