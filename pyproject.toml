@@ -20,6 +20,7 @@ numpy = "^2"
 optuna = "^3.0"
 osqp = "^0"
 scipy = "^1"
+rich = "^14.0.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "6.0.0"

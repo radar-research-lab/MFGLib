@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from mfglib.alg.utils import project_onto_simplex, tuple_prod
+from mfglib.alg.utils import project_onto_simplex
 from mfglib.env import Environment
 
 
@@ -37,8 +37,8 @@ def mf_omo_constraints(
     r_max = env_instance.r_max  # reward supremum
 
     # Auxiliary variables
-    n_s = tuple_prod(S)
-    n_a = tuple_prod(A)
+    n_s = env_instance.n_states
+    n_a = env_instance.n_actions
 
     # Clone and detach tensors
     L_p = L.clone().detach()

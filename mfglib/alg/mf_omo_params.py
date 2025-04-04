@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import torch
 
-from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
 
 
@@ -32,8 +31,8 @@ def mf_omo_params(
 
     # Auxiliary variables
     l_s = len(S)
-    n_s = tuple_prod(S)
-    n_a = tuple_prod(A)
+    n_s = env_instance.n_states
+    n_a = env_instance.n_actions
     v = torch.zeros((n_s, n_a))
     v[0, :] = 1.0
     z = v.clone()  # matrix z with a different column arrangement

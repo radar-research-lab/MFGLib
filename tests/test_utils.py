@@ -1,19 +1,11 @@
 from __future__ import annotations
 
+import numpy as np
 import pytest
 import torch
 
-from mfglib.alg.utils import hat_initialization, project_onto_simplex, tuple_prod
+from mfglib.alg.utils import hat_initialization, project_onto_simplex
 from mfglib.env import Environment
-
-
-@pytest.mark.parametrize("num_type", [int, float])
-def test_tuple_prod(num_type: type[int] | type[float]) -> None:
-    """Check that the result is correct, and the datatype is preserved."""
-    tup = tuple(num_type(x) for x in range(1, 4))
-    result = tuple_prod(tup)
-    assert result == num_type(6)
-    assert isinstance(result, num_type)
 
 
 def test_project_onto_simplex() -> None:
@@ -44,7 +36,10 @@ def test_project_onto_simplex() -> None:
 def test_hat_initialization(env: Environment) -> None:
     size = (env.T + 1, *env.S, *env.A)
 
-    L = torch.ones(size=size) / tuple_prod(env.S + env.A)
+    def tuple_prod(tup: tuple[int, ...]) -> int:
+        return np.prod(tup).item()
+
+    L = torch.ones(size=size) / np.prod(env.S + env.A).item()
 
     z_hat, y_hat = hat_initialization(env, L, parameterize=False)
     assert isinstance(z_hat, torch.Tensor)
