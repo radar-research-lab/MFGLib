@@ -73,7 +73,7 @@ class FictitiousPlay(Iterative[State]):
         mu = L.flatten(start_dim=1 + states_dim).sum(dim=-1, keepdim=True)
         mu_br = L_br.flatten(start_dim=1 + states_dim).sum(dim=-1, keepdim=True)
 
-        alpha_i = self.alpha if self.alpha else 1 / (state.i + 1)
+        alpha_i = self.alpha if self.alpha else 1 / (state.i + 2)
 
         numer = (1 - alpha_i) * mu * pi + alpha_i * mu_br * pi_br
         denom = (1 - alpha_i) * mu + alpha_i * mu_br

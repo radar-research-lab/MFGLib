@@ -51,7 +51,7 @@ def mf_omo_residual_balancing(
 
     # Auxiliary variables
     n_s = env_instance.n_states
-    n_a = env_instance.n_states
+    n_a = env_instance.n_actions
     c_v = n_s * n_a * (T**2 + T + 2) * r_max
     c_w = n_s * (T + 1) * (T + 2) * r_max / 2 / torch.sqrt(torch.tensor(n_s * (T + 1)))
 

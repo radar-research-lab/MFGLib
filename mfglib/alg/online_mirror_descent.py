@@ -50,8 +50,8 @@ class OnlineMirrorDescent(Iterative[State]):
         L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi)
         y = state.y + self.alpha * Q
-        states_dim = len(state.env.S)
-        y_flat = state.y.flatten(start_dim=1 + states_dim)
+        n_state_coords = len(state.env.S)
+        y_flat = y.flatten(start_dim=1 + n_state_coords)
         softmax = torch.nn.Softmax(dim=-1)
         pi = softmax(y_flat).reshape(state.env.T + 1, *state.env.S, *state.env.A)
         return State(env=state.env, pi=pi, y=y)
