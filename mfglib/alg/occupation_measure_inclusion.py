@@ -26,7 +26,7 @@ from mfglib.scoring import exploitability_score
 
 # TODO: Change to support warm start and update vectors to be more efficient
 #  https://osqp.org/docs/interfaces/python.html#python-interface
-def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
+def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor, eps_abs: float=1e-8, eps_rel: float=1e-8) -> torch.Tensor:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
     n = d.size(dim=0)
@@ -45,7 +45,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
+    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=eps_abs, eps_rel=eps_rel)
     res = prob.solve()
 
     # numpy default is double which is fine; but to get matmul(A, sol) work needs
@@ -92,6 +92,8 @@ class OccupationMeasureInclusion(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
+        osqp_atol: float | None = None,
+        osqp_rtol: float | None = None,
         verbose: bool = False,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Run the algorithm and solve for a Nash-Equilibrium policy.
@@ -109,9 +111,16 @@ class OccupationMeasureInclusion(Algorithm):
             Absolute tolerance criteria for early stopping.
         rtol
             Relative tolerance criteria for early stopping.
+        osqp_atol
+            Absolute tolerance criteria for early stopping of OSPQ projection inner steps.
+        osqp_rtol
+            Relative tolerance criteria for early stopping of OSPQ projection inner steps.
         verbose
             Print convergence information during iteration.
         """
+        osqp_atol = atol if osqp_atol is None else osqp_atol
+        osqp_rtol = rtol if osqp_rtol is None else osqp_rtol
+
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
@@ -151,7 +160,7 @@ class OccupationMeasureInclusion(Algorithm):
 
             # Update d and pi
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-            d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+            d = osqp_proj(d.flatten(), b, A_d, osqp_atol, osqp_rtol).reshape(*d_shape)
             pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
 
             solutions.append(
