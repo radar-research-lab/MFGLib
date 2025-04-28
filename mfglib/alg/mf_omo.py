@@ -283,7 +283,8 @@ class MFOMO(Algorithm):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: int = 0,
+        verbose: bool = False,
+        print_every: int = 50,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Mean-Field Occupation Measure Optimization algorithm.
 
@@ -302,6 +303,8 @@ class MFOMO(Algorithm):
             Relative tolerance criteria for early stopping.
         verbose
             Print convergence information during iteration.
+        print_every
+            Control how many iterations between printouts.
         """
         T = env.T
         S = env.S
@@ -346,7 +349,7 @@ class MFOMO(Algorithm):
         expls = [exploitability_score(env, pi)]
         rts = [0.0]
 
-        logger = Logger(verbose)
+        logger = Logger(verbose, print_every)
         logger.display_info(
             env=env,
             cls=f"{self.__class__.__name__}",

@@ -5,9 +5,10 @@ build:
   tools:
     python: "3.12"
   jobs:
-    install:
-      - curl -sSL https://install.python-poetry.org | python3 -
-      - /home/docs/.local/bin/poetry install --with docs --without dev
-    build:
-      html:
-        - /home/docs/.local/bin/poetry run sphinx-build -EW docs/source $READTHEDOCS_OUTPUT/html
+    post_install:
+      - pip install poetry
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
+
+sphinx:
+  configuration: docs/source/conf.py
+  fail_on_warning: true

@@ -101,7 +101,7 @@ The computed exploitability score is decreased significantly implying that the l
 approximation of an NE solution for the **Beach Bar** environment.
 
 
-You can monitor the progression of an algorithm by setting its `verbose`` parameter to a positive integer.
+You can monitor the progression of an algorithm by setting its ``verbose`` parameter to a positive integer.
 
 .. jupyter-execute::
 

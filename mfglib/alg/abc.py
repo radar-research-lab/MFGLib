@@ -64,7 +64,8 @@ class Algorithm(abc.ABC):
         max_iter: int = ...,
         atol: float | None = ...,
         rtol: float | None = ...,
-        verbose: int = ...,
+        verbose: bool = ...,
+        print_every: int = ...,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         raise NotImplementedError
 
@@ -118,8 +119,8 @@ class Algorithm(abc.ABC):
             sampler
                 The sampler used to explore the search space of the optimization.
                 If ``None``, the default sampler ``optuna.samplers.TPESampler`` is
-                used. The sampler guides how different hyperparameter trials are
-                selected.
+                used (with ``seed=0`` for reproducibility). The sampler guides how
+                different hyperparameter trials are selected.
             frozen_attrs
                 A list of attributes that should be frozen (i.e., fixed) during the
                 optimization process. These attributes will not be considered for
@@ -139,7 +140,7 @@ class Algorithm(abc.ABC):
 
         """
         if sampler is None:
-            sampler = optuna.samplers.TPESampler()
+            sampler = optuna.samplers.TPESampler(seed=0)
 
         solve_kwargs = solve_kwargs or {}
 
@@ -189,7 +190,8 @@ class Iterative(Algorithm, Generic[T]):
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
-        verbose: int = 0,
+        verbose: bool = False,
+        print_every: int = 50,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         if pi_0 == "uniform":
             pi_0 = torch.ones((env.T + 1,) + env.S + env.A) / env.n_actions
@@ -205,7 +207,7 @@ class Iterative(Algorithm, Generic[T]):
 
         state = self.init_state(env, pi_0)
 
-        logger = Logger(verbose)
+        logger = Logger(verbose, print_every)
         logger.display_info(
             env=env,
             cls=f"{self.__class__.__name__}",
@@ -266,8 +268,9 @@ class Logger:
     INFO_PANEL_WIDTH: Final = 61
     MAX_TABLE_LENGTH: Final = 50
 
-    def __init__(self, verbose: int) -> None:
+    def __init__(self, verbose: bool, print_every: int) -> None:
         self.verbose = verbose
+        self.print_every = print_every
         self.table = self.create_empty_table()
 
     @staticmethod
@@ -350,7 +353,7 @@ class Logger:
     def insert_row(
         self, i: int, expl: float, ratio: float, argmin: int, elapsed: float
     ) -> None:
-        if self.verbose and i % self.verbose == 0:
+        if self.verbose and i % self.print_every == 0:
             self.table.add_row(
                 f"{i}",
                 f"{expl:.4e}",
