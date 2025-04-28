@@ -2,3 +2,4 @@ References
 ==========
 
 .. bibliography::
+    :all:

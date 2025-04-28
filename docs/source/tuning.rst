@@ -50,3 +50,23 @@ To implement a user-defined method, you simply need to create an object which im
 
 .. autoclass:: mfglib.tuning::Metric.evaluate
     :no-index:
+
+Let's implement a simple metric -- the highest exploitability encountered across all environment/policy pairs.
+We'll call it the ``Linfty`` metric, since it roughly corresponds to the :math:`\ell_\infty` norm.
+
+.. code-block:: python
+
+    from mfglib.alg.abc import SolveKwargs
+
+    class Linfty:
+        def evaluate(
+            pis: list[list[torch.Tensor]],
+            expls: list[list[float]],
+            rts: list[list[float]],
+            solve_kwargs: SolveKwargs
+        ) -> float:
+            max_expl = 0
+            for env_expl_list in expls:
+                max_expl_for_env = max(env_expl_list)
+                max_expl = max(max_expl, max_expl_for_env)
+            return max_expl

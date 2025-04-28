@@ -25,7 +25,7 @@ Informal
 Multi-agent systems are ubiquitous in modern engineering applications. However, *large-population* systems
 present a challenge. Traditional :math:`N`-players methods eventually break down as :math:`N \to \infty`.
 
-A MFG is a type of mathematical model capable of describing systems with many, many agents. To accomplish this,
+An MFG is a type of mathematical model capable of describing systems with many, many agents. To accomplish this,
 we must assume
 
 1. The agents/players are indistinguishable and
@@ -36,6 +36,9 @@ agent and the population as a whole.
 
 Formal
 """"""
+
+In what follows, :math:`\Delta_{X}` denotes the set of probability distributions over a given finite set :math:`X`. Furthermore,
+if :math:`X` and :math:`Y` are two given finite sets, then :math:`X^Y` denotes the set of maps from :math:`Y` to :math:`X`.
 
 Let :math:`\mathcal{T} \triangleq \{0, 1, \dots, T\}` denote the set of timesteps, :math:`\mathcal{S} \triangleq \{1, 2, \dots, S\}`
 be the state space, and :math:`\mathcal{A} \triangleq \{1, 2, \dots, A\}` be the action space. We describe the representative agent
@@ -51,8 +54,8 @@ seeks a policy :math:`\pi` to maximize her value function
 
     V(\pi; L) \triangleq \mathbb{E}\left[ \sum_{t=0}^{T} \gamma^t r_t(s_t, a_t, L_t) \mid s_0 \sim \mu_0 \right]
 
-subject to dynamics :math:`a_t \sim \pi_t(s_t)` and :math:`s_{t + 1} \sim P(s_t, a_t, L_t)`. Note if every agent
-followed policy :math:`\pi` it would induce a mean-field denoted by :math:`L^{\pi}`.
+subject to dynamics :math:`a_t \sim \pi_t(s_t)` and :math:`s_{t + 1} \sim P(s_t, a_t, L_t)`. If every agent
+were to follow policy :math:`\pi` it would induce a mean-field we denote by :math:`L^{\pi}`.
 
 To "solve" a MFG we seek a Nash equilibrium (NE). A pair :math:`\left( \pi^*, L^* \right)` is a NE
 if it meets two conditions:
@@ -96,7 +99,7 @@ Exploitability
 For most MFGs, we may not be able to get a closed-form of their NE solutions. Therefore, in order to find how close a
 given policy is to an NE solution, we use a metric called **exploitability**.
 
-Exploitability characterizes the suboptimality of a policy :math:`pi` under :math:`L^{\pi}` as follows:
+Exploitability characterizes the suboptimality of a policy :math:`\pi` against mean-field :math:`L^{\pi}` as follows:
 
 .. math::
 
@@ -104,4 +107,4 @@ Exploitability characterizes the suboptimality of a policy :math:`pi` under :mat
 
 If :math:`\text{Expl}(\pi^*) \leq \epsilon` for some :math:`\epsilon \geq 0` then :math:`( \pi^*, L^{\pi^*} )`
 is said to be an :math:`\epsilon`-Nash equilibrium. If :math:`\epsilon = 0` then :math:`( \pi^*, L^{\pi^*} )` is
-an exact NE.
+an exact NE. For a more complete description of exploitability, refer to :cite:t:`2022:guo`.

@@ -106,8 +106,8 @@ class MFOMO(Algorithm):
 
     You can also apply different norm to the objective terms. The pre-configured options are
      * ``"l1"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 z^\top L`
-     * ``"l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 ( z^\top L)^2`
-     * ``"l1_l2"`` with objective - ``"l1"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 z^\top L`
+     * ``"l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 ( z^\top L)^2`
+     * ``"l1_l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 z^\top L`
 
     **Adaptive Residual Balancing:** We can adaptively change the coefficients (:math:`c_1`, :math:`c_2`, and :math:`c_3`)
     of the redesigned objective based on the value of their corresponding objective term. This process is controlled
