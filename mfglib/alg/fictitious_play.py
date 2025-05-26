@@ -183,9 +183,11 @@ class FictitiousPlay(Algorithm):
 
         return solutions, scores, runtimes
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> FictitiousPlay:
+    def _init_tuner_instance(self, trial: optuna.Trial) -> FictitiousPlay:
         alpha_bool = trial.suggest_categorical("alpha_bool", [False, True])
         alpha_num = trial.suggest_float("alpha_num", 0.0, 1.0)
         alpha = None if alpha_bool else alpha_num
         return FictitiousPlay(alpha=alpha)
+
+    def from_study(self, study: optuna.Study) -> FictitiousPlay:
+        return # placeholder for the mfomi paper revision example test

@@ -26,7 +26,7 @@ from mfglib.scoring import exploitability_score
 
 # TODO: Change to support warm start and update vectors to be more efficient
 #  https://osqp.org/docs/interfaces/python.html#python-interface
-def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
+def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor, x0: np.ndarray | None = None, y0: np.ndarray | None = None, eps_abs: float=1e-8, eps_rel: float=1e-8) -> torch.Tensor:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
     n = d.size(dim=0)
@@ -45,14 +45,16 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
+    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=eps_abs, eps_rel=eps_rel)
+    if x0 is not None and y0 is not None:
+        prob.warm_start(x=x0, y=y0)
     res = prob.solve()
 
     # numpy default is double which is fine; but to get matmul(A, sol) work needs
     # both to be same type
     sol = torch.tensor(res.x).float()
 
-    return sol
+    return sol, res.x, res.y
 
 
 class OccupationMeasureInclusion(Algorithm):
@@ -66,7 +68,13 @@ class OccupationMeasureInclusion(Algorithm):
     monotonicity property.
     """
 
-    def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
+    def __init__(
+        self, 
+        alpha: float = 1.0, 
+        eta: float = 0.0, 
+        osqp_atol: float | None = None,
+        osqp_rtol: float | None = None,
+        ) -> None:
         """
 
         Attributes
@@ -76,9 +84,15 @@ class OccupationMeasureInclusion(Algorithm):
         eta
             Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
             the cost of asymptotic suboptimality.
+        osqp_atol
+            Absolute tolerance criteria for early stopping of OSQP projection inner steps.
+        osqp_rtol
+            Relative tolerance criteria for early stopping of OSQP projection inner steps.
         """
         self.alpha = alpha
         self.eta = eta
+        self.osqp_atol = osqp_atol
+        self.osqp_rtol = osqp_rtol
 
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
@@ -112,6 +126,9 @@ class OccupationMeasureInclusion(Algorithm):
         verbose
             Print convergence information during iteration.
         """
+        osqp_atol = atol if self.osqp_atol is None else self.osqp_atol
+        osqp_rtol = rtol if self.osqp_rtol is None else self.osqp_rtol
+
         pi = _ensure_free_tensor(pi, env_instance)
 
         solutions = [pi]
@@ -144,6 +161,8 @@ class OccupationMeasureInclusion(Algorithm):
         d = mean_field(env_instance, pi)
         d_shape = list(d.shape)  # non-flattened shape of d
 
+        x0, y0 = None, None
+
         t = time.time()
         for n in range(1, max_iter + 1):
             # obtain occupation-measure params
@@ -151,7 +170,8 @@ class OccupationMeasureInclusion(Algorithm):
 
             # Update d and pi
             d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-            d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+            d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)
+            d = d.reshape(*d_shape)
             pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
 
             solutions.append(
@@ -181,8 +201,20 @@ class OccupationMeasureInclusion(Algorithm):
 
         return solutions, scores, runtimes
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
+    def _init_tuner_instance(self, trial: optuna.Trial) -> OccupationMeasureInclusion:
         return OccupationMeasureInclusion(
             alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
+            eta=self.eta,
+            osqp_atol=self.osqp_atol,
+            osqp_rtol=self.osqp_rtol,
+        )
+
+    def from_study(self, study: optuna.Study) -> OccupationMeasureInclusion:
+        assert list(study.best_params.keys()) == ["alpha"], f"{study.best_params.keys()=} but should only contain alpha."
+        
+        return OccupationMeasureInclusion(
+            **study.best_params,
+            eta=self.eta,
+            osqp_atol=self.osqp_atol,
+            osqp_rtol=self.osqp_rtol,
         )

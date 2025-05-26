@@ -459,8 +459,7 @@ class MFOMO(Algorithm):
 
         return solutions, scores, runtimes
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
+    def _init_tuner_instance(self, trial: optuna.Trial) -> MFOMO:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
         rb_freq_num = trial.suggest_int("rb_freq_num", 1, 201, step=10)
         rb_freq = None if rb_freq_bool else rb_freq_num
@@ -485,3 +484,7 @@ class MFOMO(Algorithm):
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
             hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
+
+    def from_study(self, study: optuna.Study) -> MFOMO:
+        return # placeholder for the mfomi paper revision example test
+        

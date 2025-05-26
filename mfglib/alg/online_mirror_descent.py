@@ -153,8 +153,11 @@ class OnlineMirrorDescent(Algorithm):
 
         return solutions, scores, runtimes
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> OnlineMirrorDescent:
+    def _init_tuner_instance(self, trial: optuna.Trial) -> OnlineMirrorDescent:
         return OnlineMirrorDescent(
             alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True),
         )
+
+    def from_study(self, study: optuna.Study) -> OnlineMirrorDescent:
+        return # placeholder for the mfomi paper revision example test
+

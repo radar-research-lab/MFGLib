@@ -174,8 +174,7 @@ class PriorDescent(Algorithm):
 
         return solutions, scores, runtimes
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> PriorDescent:
+    def _init_tuner_instance(self, trial: optuna.Trial) -> PriorDescent:
         n_inner_bool = trial.suggest_categorical("n_inner_bool", [False, True])
         n_inner_num = trial.suggest_int("n_inner_num", 1, 101, step=5)
         n_inner = None if n_inner_bool else n_inner_num
@@ -183,3 +182,7 @@ class PriorDescent(Algorithm):
             eta=trial.suggest_float("eta", 1e-5, 1e5, log=True),
             n_inner=n_inner,
         )
+
+    def from_study(self, study: optuna.Study) -> MFOMO:
+        return # placeholder for the mfomi paper revision example test
+        
