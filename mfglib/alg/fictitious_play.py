@@ -190,4 +190,8 @@ class FictitiousPlay(Algorithm):
         return FictitiousPlay(alpha=alpha)
 
     def from_study(self, study: optuna.Study) -> FictitiousPlay:
-        return # placeholder for the mfomi paper revision example test
+        best_params = study.best_params
+        alpha_bool = best_params.pop("alpha_bool")
+        alpha_num = best_params.pop("alpha_num")
+        alpha = None if alpha_bool else alpha_num
+        return FictitiousPlay(alpha=alpha)

@@ -159,5 +159,5 @@ class OnlineMirrorDescent(Algorithm):
         )
 
     def from_study(self, study: optuna.Study) -> OnlineMirrorDescent:
-        return # placeholder for the mfomi paper revision example test
+        return OnlineMirrorDescent(**study.best_params)
 

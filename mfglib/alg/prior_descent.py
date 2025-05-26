@@ -184,5 +184,9 @@ class PriorDescent(Algorithm):
         )
 
     def from_study(self, study: optuna.Study) -> MFOMO:
-        return # placeholder for the mfomi paper revision example test
+        best_params = study.best_params
+        n_inner_bool = best_params.pop("n_inner_bool")
+        n_inner_num = best_params.pop("n_inner_num")
+        n_inner = None if n_inner_bool else n_inner_num
+        return PriorDescent(n_inner=n_inner, **best_params)
         

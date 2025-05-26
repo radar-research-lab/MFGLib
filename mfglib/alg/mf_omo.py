@@ -486,5 +486,14 @@ class MFOMO(Algorithm):
         )
 
     def from_study(self, study: optuna.Study) -> MFOMO:
-        return # placeholder for the mfomi paper revision example test
-        
+        best_params = study.best_params
+        rb_freq_bool = best_params.pop("rb_freq_bool")
+        rb_freq_num = best_params.pop("rb_freq_num")
+        rb_freq = None if rb_freq_bool else rb_freq_num
+
+        optimizer = {
+            "name": best_params.pop("name"),
+            "config": {"lr": best_params.pop("lr")},
+        }
+
+        return MFOMO(rb_freq=rb_freq, optimizer=optimizer, **best_params)
