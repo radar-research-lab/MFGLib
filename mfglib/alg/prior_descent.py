@@ -189,4 +189,3 @@ class PriorDescent(Algorithm):
         n_inner_num = best_params.pop("n_inner_num")
         n_inner = None if n_inner_bool else n_inner_num
         return PriorDescent(n_inner=n_inner, **best_params)
-        

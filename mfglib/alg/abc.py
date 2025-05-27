@@ -80,7 +80,9 @@ class Algorithm(abc.ABC):
         pi0s: Sequence[torch.Tensor] | Literal["uniform"] = "uniform",
         solve_kwargs: SolveKwargs | None = None,
         sampler: optuna.samplers.BaseSampler | None = None,
-        default_sampler_seed: int | None = 0, # default to 0 to ensure reproducibility even when sampler is None so using TPESampler(seed=0) instead of TPESampler()
+        default_sampler_seed: (
+            int | None
+        ) = 0,  # default to 0 to ensure reproducibility even when sampler is None so using TPESampler(seed=0) instead of TPESampler()
         frozen_attrs: Iterable[str] | None = None,
         n_trials: int | None = None,
         timeout: float | None = None,

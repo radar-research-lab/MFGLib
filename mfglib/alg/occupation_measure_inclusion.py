@@ -26,7 +26,15 @@ from mfglib.scoring import exploitability_score
 
 # TODO: Change to support warm start and update vectors to be more efficient
 #  https://osqp.org/docs/interfaces/python.html#python-interface
-def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor, x0: np.ndarray | None = None, y0: np.ndarray | None = None, eps_abs: float=1e-8, eps_rel: float=1e-8) -> torch.Tensor:
+def osqp_proj(
+    d: torch.Tensor,
+    b: torch.Tensor,
+    A: torch.Tensor,
+    x0: np.ndarray | None = None,
+    y0: np.ndarray | None = None,
+    eps_abs: float = 1e-8,
+    eps_rel: float = 1e-8,
+) -> torch.Tensor:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
     n = d.size(dim=0)
@@ -45,7 +53,9 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor, x0: np.ndarray 
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=eps_abs, eps_rel=eps_rel)
+    prob.setup(
+        P, q, A_constraint, l, u, verbose=False, eps_abs=eps_abs, eps_rel=eps_rel
+    )
     if x0 is not None and y0 is not None:
         prob.warm_start(x=x0, y=y0)
     res = prob.solve()
@@ -69,12 +79,12 @@ class OccupationMeasureInclusion(Algorithm):
     """
 
     def __init__(
-        self, 
-        alpha: float = 1.0, 
-        eta: float = 0.0, 
+        self,
+        alpha: float = 1.0,
+        eta: float = 0.0,
         osqp_atol: float | None = None,
         osqp_rtol: float | None = None,
-        ) -> None:
+    ) -> None:
         """
 
         Attributes
@@ -210,8 +220,10 @@ class OccupationMeasureInclusion(Algorithm):
         )
 
     def from_study(self, study: optuna.Study) -> OccupationMeasureInclusion:
-        assert list(study.best_params.keys()) == ["alpha"], f"{study.best_params.keys()=} but should only contain alpha."
-        
+        assert list(study.best_params.keys()) == [
+            "alpha"
+        ], f"{study.best_params.keys()=} but should only contain alpha."
+
         return OccupationMeasureInclusion(
             **study.best_params,
             eta=self.eta,

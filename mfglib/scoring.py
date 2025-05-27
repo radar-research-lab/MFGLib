@@ -16,36 +16,42 @@ def postprocess_policy(env_instance: Environment, pi: torch.Tensor) -> torch.Ten
     """encure policy to be in the probability simplex"""
     zeros = torch.zeros(*pi.shape)
     pi = torch.maximum(pi, zeros)
-    S = env_instance.S 
+    S = env_instance.S
     A = env_instance.A
     l_s = len(S)
     l_a = len(A)
     n_a = tuple_prod(A)
     ones_ts = (1,) * (l_s + 1)
     ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
-    pi_sum_rptd = pi.flatten(start_dim=1 + l_s).sum(-1).repeat(A + ones_ts).permute(ats_to_tsa)
+    pi_sum_rptd = (
+        pi.flatten(start_dim=1 + l_s).sum(-1).repeat(A + ones_ts).permute(ats_to_tsa)
+    )
     pi = pi.div(pi_sum_rptd).nan_to_num(
         nan=1 / n_a, posinf=1 / n_a, neginf=1 / n_a
-    ) # using uniform distribution when L_t_sum_rptd is zero
+    )  # using uniform distribution when L_t_sum_rptd is zero
 
     return pi
 
 
 @overload
-def exploitability_score(env_instance: Environment, pi: torch.Tensor, ensure_feasible_policy: bool=True) -> float: ...
+def exploitability_score(
+    env_instance: Environment, pi: torch.Tensor, ensure_feasible_policy: bool = True
+) -> float: ...
 
 
 @overload
 def exploitability_score(
-    env_instance: Environment, pi: list[torch.Tensor], ensure_feasible_policy: bool=True
+    env_instance: Environment,
+    pi: list[torch.Tensor],
+    ensure_feasible_policy: bool = True,
 ) -> list[float]: ...
 
 
 def exploitability_score(
-    env_instance: Environment, 
-    pi: torch.Tensor | list[torch.Tensor], 
-    ensure_feasible_policy: bool=True, 
-    precision: float | None=None,
+    env_instance: Environment,
+    pi: torch.Tensor | list[torch.Tensor],
+    ensure_feasible_policy: bool = True,
+    precision: float | None = None,
 ) -> float | list[float]:
     """Compute the exploitability metric for a given policy (or policies)."""
     if isinstance(pi, list):

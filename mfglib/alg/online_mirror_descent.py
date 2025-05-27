@@ -160,4 +160,3 @@ class OnlineMirrorDescent(Algorithm):
 
     def from_study(self, study: optuna.Study) -> OnlineMirrorDescent:
         return OnlineMirrorDescent(**study.best_params)
-
