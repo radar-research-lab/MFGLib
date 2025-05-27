@@ -5,9 +5,9 @@ from typing import cast, overload
 import torch
 
 from mfglib.alg.q_fn import QFn
+from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.alg.utils import tuple_prod
 
 __all__ = ["exploitability_score"]
 
