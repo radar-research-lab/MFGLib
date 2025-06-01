@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import time
-from typing import Literal, Optional, Any
+from typing import Any, Literal, Optional
 
 import numpy as np
-from numpy.typing import NDArray
 import optuna
 import osqp
 import torch
+from numpy.typing import NDArray
 from scipy import sparse
 
 from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
