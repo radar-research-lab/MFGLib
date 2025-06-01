@@ -77,6 +77,8 @@ def exploitability_score(
     expl = cast(float, (expl1 - expl2).item())
 
     # ensure getting non-negative value getting a negative expl but within precision
-    expl = 0.0 if precision is not None and abs(expl) <= precision and expl < 0.0 else expl
+    expl = (
+        0.0 if precision is not None and abs(expl) <= precision and expl < 0.0 else expl
+    )
 
     return expl
