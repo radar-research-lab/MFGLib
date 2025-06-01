@@ -65,9 +65,12 @@ class Algorithm(abc.ABC):
         """Represent algorithm instance and associated parameters with a string."""
         raise NotImplementedError
 
-    @classmethod
     @abc.abstractmethod
-    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def from_study(self: Self, study: optuna.Study) -> Self:
         raise NotImplementedError
 
     def tune(
@@ -77,6 +80,9 @@ class Algorithm(abc.ABC):
         pi0s: Sequence[torch.Tensor] | Literal["uniform"] = "uniform",
         solve_kwargs: SolveKwargs | None = None,
         sampler: optuna.samplers.BaseSampler | None = None,
+        default_sampler_seed: (
+            int | None
+        ) = 0,  # default to 0 to ensure reproducibility even when sampler is None so using TPESampler(seed=0) instead of TPESampler()
         frozen_attrs: Iterable[str] | None = None,
         n_trials: int | None = None,
         timeout: float | None = None,
@@ -118,7 +124,7 @@ class Algorithm(abc.ABC):
 
         """
         if sampler is None:
-            sampler = optuna.samplers.TPESampler()
+            sampler = optuna.samplers.TPESampler(seed=default_sampler_seed)
 
         solve_kwargs = solve_kwargs or {}
 
