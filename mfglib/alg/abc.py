@@ -66,12 +66,12 @@ class Algorithm(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _init_tuner_instance(self, trial: optuna.Trial) -> Self:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def from_study(self, study: optuna.Study) -> Self:
-        return NotImplementedError
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        raise NotImplementedError
 
     def tune(
         self,

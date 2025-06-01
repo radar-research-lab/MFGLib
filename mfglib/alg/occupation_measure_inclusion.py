@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import time
-from typing import Literal
+from typing import Literal, Optional, Any
 
 import numpy as np
+from numpy.typing import NDArray
 import optuna
 import osqp
 import torch
@@ -30,11 +31,11 @@ def osqp_proj(
     d: torch.Tensor,
     b: torch.Tensor,
     A: torch.Tensor,
-    x0: np.ndarray | None = None,
-    y0: np.ndarray | None = None,
-    eps_abs: float = 1e-8,
-    eps_rel: float = 1e-8,
-) -> torch.Tensor:
+    x0: NDArray[Any] | None = None,
+    y0: NDArray[Any] | None = None,
+    eps_abs: Optional[float] = 1e-8,
+    eps_rel: Optional[float] = 1e-8,
+) -> tuple[torch.Tensor, Any, Any]:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
     n = d.size(dim=0)

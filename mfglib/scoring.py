@@ -13,7 +13,7 @@ __all__ = ["exploitability_score"]
 
 
 def postprocess_policy(env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
-    """encure policy to be in the probability simplex"""
+    """Encure policy to be in the probability simplex."""
     zeros = torch.zeros(*pi.shape)
     pi = torch.maximum(pi, zeros)
     S = env_instance.S
@@ -74,10 +74,9 @@ def exploitability_score(
     expl1 = (mu0 * max_Q_s_gamma_pi_0).sum()
     pi_Q_gamma_pi_pi_0 = (pi[0] * Q_gamma_pi_pi[0]).flatten(start_dim=l_S).sum(dim=-1)
     expl2 = (mu0 * pi_Q_gamma_pi_pi_0).sum()
-    expl = expl1 - expl2
-    expl = cast(float, expl.item())
+    expl = cast(float, (expl1 - expl2).item())
 
     # ensure getting non-negative value getting a negative expl but within precision
-    expl = 0 if precision is not None and abs(expl) <= precision and expl < 0 else expl
+    expl = 0.0 if precision is not None and abs(expl) <= precision and expl < 0.0 else expl
 
     return expl

@@ -183,7 +183,7 @@ class PriorDescent(Algorithm):
             n_inner=n_inner,
         )
 
-    def from_study(self, study: optuna.Study) -> MFOMO:
+    def from_study(self, study: optuna.Study) -> PriorDescent:
         best_params = study.best_params
         n_inner_bool = best_params.pop("n_inner_bool")
         n_inner_num = best_params.pop("n_inner_num")
