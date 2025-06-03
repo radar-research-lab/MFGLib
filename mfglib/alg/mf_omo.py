@@ -202,7 +202,7 @@ class MFOMO(Algorithm):
         m3: float = 0.1,
         optimizer: dict[str, Any] = DEFAULT_OPTIMIZER,
         parameterize: bool = False,
-        hat_init: bool = False,
+        hat_init: bool = True,
     ) -> None:
         if loss not in ["l1", "l2", "l1_l2"]:
             raise ValueError("the valid loss arguments are 'l1', 'l2', and 'l1_l2'")
