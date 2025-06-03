@@ -64,7 +64,7 @@ class OccupationMeasureInclusion(Iterative[State]):
     monotonicity property.
     """
 
-    def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
+    def __init__(self, alpha: float = 0.001, eta: float = 0.0) -> None:
         """
 
         Attributes
