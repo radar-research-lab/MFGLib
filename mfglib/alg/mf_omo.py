@@ -8,19 +8,21 @@ from typing import Any, Literal
 import optuna
 import torch
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import (
+    DEFAULT_ATOL,
+    DEFAULT_MAX_ITER,
+    DEFAULT_RTOL,
+    Algorithm,
+    Logger,
+)
 from mfglib.alg.mf_omo_constraints import mf_omo_constraints
 from mfglib.alg.mf_omo_obj import mf_omo_obj
 from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
 from mfglib.alg.utils import (
     _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
     _trigger_early_stopping,
     extract_policy_from_mean_field,
     hat_initialization,
-    tuple_prod,
 )
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score
@@ -204,14 +206,14 @@ class MFOMO(Algorithm):
 
     def _init_L(self, env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
         if self._L_or_u is None:
-            return pi / tuple_prod(env_instance.S)
+            return pi / env_instance.n_states
         else:
             return self._L_or_u
 
     def _init_u(self, env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
         # following pi(a|s)=L(s,a)/mu(s), this mean-field yields policy pi_np
         if self._L_or_u is None:
-            L = pi / tuple_prod(env_instance.S)
+            L = pi / env_instance.n_states
             if (L == 0).any():
                 raise ValueError("zero value encountered; unable to take log")
             return torch.log(L)
@@ -221,8 +223,8 @@ class MFOMO(Algorithm):
     def _init_z(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._z_or_v is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
-            n_a = tuple_prod(env_instance.A)
+            n_s = env_instance.n_states
+            n_a = env_instance.n_actions
             if self.hat_init:
                 z_hat, _ = hat_initialization(env_instance, L, self.parameterize)
                 return z_hat  # type: ignore[return-value]
@@ -233,8 +235,8 @@ class MFOMO(Algorithm):
     def _init_v(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._z_or_v is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
-            n_a = tuple_prod(env_instance.A)
+            n_s = env_instance.n_states
+            n_a = env_instance.n_actions
             if self.hat_init:
                 v_hat, _ = hat_initialization(env_instance, L, self.parameterize)
                 if v_hat is not None:
@@ -246,7 +248,7 @@ class MFOMO(Algorithm):
     def _init_y(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._y_or_w is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
+            n_s = env_instance.n_states
             if self.hat_init:
                 _, y_hat = hat_initialization(env_instance, L, self.parameterize)
                 return y_hat
@@ -257,7 +259,7 @@ class MFOMO(Algorithm):
     def _init_w(self, env_instance: Environment, L: torch.Tensor) -> torch.Tensor:
         if self._y_or_w is None:
             T = env_instance.T
-            n_s = tuple_prod(env_instance.S)
+            n_s = env_instance.n_states
             if self.hat_init:
                 _, w_hat = hat_initialization(env_instance, L, self.parameterize)
                 return w_hat
@@ -270,26 +272,27 @@ class MFOMO(Algorithm):
         return (
             f"MFOMO(loss={self.loss}, c1={self.c1}, c2={self.c2}, c3={self.c3}, "
             f"rb_freq={self.rb_freq}, m1={self.m1}, m2={self.m2}, m3={self.m3}, "
-            f"parameterize={self.parameterize})"
+            f"parameterize={self.parameterize}, hat_init={self.hat_init})"
         )
 
     def solve(
         self,
-        env_instance: Environment,
+        env: Environment,
         *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
+        pi_0: Literal["uniform"] | torch.Tensor = "uniform",
         max_iter: int = DEFAULT_MAX_ITER,
         atol: float | None = DEFAULT_ATOL,
         rtol: float | None = DEFAULT_RTOL,
         verbose: bool = False,
+        print_every: int = 50,
     ) -> tuple[list[torch.Tensor], list[float], list[float]]:
         """Mean-Field Occupation Measure Optimization algorithm.
 
         Args
         ----
-        env_instance
+        env
             An instance of a specific environment.
-        pi
+        pi_0
             A user-provided array of size (T+1,) + S + A representing the initial
             policy. If 'uniform', the initial policy will be uniformly distributed.
         max_iter
@@ -300,30 +303,22 @@ class MFOMO(Algorithm):
             Relative tolerance criteria for early stopping.
         verbose
             Print convergence information during iteration.
+        print_every
+            Control how many iterations between printouts.
         """
-        T = env_instance.T
-        S = env_instance.S
-        A = env_instance.A
+        T = env.T
+        S = env.S
+        A = env.A
 
-        pi = _ensure_free_tensor(pi, env_instance)
+        pi = _ensure_free_tensor(pi_0, env)
 
         # Initialization
-        L = self._init_L(env_instance, pi)
+        L = self._init_L(env, pi)
         L_u_tensor = (
-            self._init_u(env_instance, pi)
-            if self.parameterize
-            else self._init_L(env_instance, pi)
+            self._init_u(env, pi) if self.parameterize else self._init_L(env, pi)
         )
-        z_v_tensor = (
-            self._init_v(env_instance, L)
-            if self.parameterize
-            else self._init_z(env_instance, L)
-        )
-        y_w_tensor = (
-            self._init_w(env_instance, L)
-            if self.parameterize
-            else self._init_y(env_instance, L)
-        )
+        z_v_tensor = self._init_v(env, L) if self.parameterize else self._init_z(env, L)
+        y_w_tensor = self._init_w(env, L) if self.parameterize else self._init_y(env, L)
 
         c1, c2 = self.c1, self.c2
 
@@ -340,49 +335,59 @@ class MFOMO(Algorithm):
         soft_max = torch.nn.Softmax(dim=-1)
 
         if not self.parameterize:
-            pi = extract_policy_from_mean_field(
-                env_instance, L_u_tensor.clone().detach()
-            )
+            pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
         else:
             pi = extract_policy_from_mean_field(
-                env_instance,
+                env,
                 soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                     (T + 1,) + S + A
                 ),
             )
 
-        solutions = [pi]
+        pis = [pi]
         argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
-        runtimes = [0.0]
+        expls = [exploitability_score(env, pi)]
+        rts = [0.0]
 
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
+        logger = Logger(verbose, print_every)
+        logger.display_info(
+            env=env,
+            cls=f"{self.__class__.__name__}",
+            parameters={
+                "loss": self.loss,
+                "c1": self.c1,
+                "c2": self.c2,
+                "c3": self.c3,
+                "rb_freq": self.rb_freq,
+                "m1": self.m1,
+                "m2": self.m2,
+                "m3": self.m3,
+                "parameterize": self.parameterize,
+                "hat_init": self.hat_init,
+                "optimizer": self.optimizer,
+            },
+            atol=atol,
+            rtol=rtol,
+            max_iter=max_iter,
+        )
+        logger.insert_row(
+            i=0,
+            expl=expls[0],
+            ratio=expls[0] / expls[0],
+            argmin=argmin,
+            elapsed=rts[0],
+        )
 
-        if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
-            return solutions, scores, runtimes
+        if _trigger_early_stopping(expls[0], expls[0], atol, rtol):
+            logger.flush_stopped()
+            return pis, expls, rts
 
-        t = time.time()
-        for n in range(1, max_iter + 1):
+        t_0 = time.time()
+        for i in range(1, max_iter + 1):
             # Residual Balancing
-            if self.rb_freq and (n + 1) % self.rb_freq == 0:
+            if self.rb_freq and (i + 1) % self.rb_freq == 0:
                 c1, c2 = mf_omo_residual_balancing(
-                    env_instance,
+                    env,
                     L_u_tensor,
                     z_v_tensor,
                     y_w_tensor,
@@ -397,7 +402,7 @@ class MFOMO(Algorithm):
 
             # Update the parameters
             obj = mf_omo_obj(
-                env_instance,
+                env,
                 L_u_tensor,
                 z_v_tensor,
                 y_w_tensor,
@@ -419,45 +424,38 @@ class MFOMO(Algorithm):
                     L_u_tensor.data,
                     z_v_tensor.data,
                     y_w_tensor.data,
-                ) = mf_omo_constraints(env_instance, L_u_tensor, z_v_tensor, y_w_tensor)
+                ) = mf_omo_constraints(env, L_u_tensor, z_v_tensor, y_w_tensor)
 
             # Compute and store solution policy
             if not self.parameterize:
-                pi = extract_policy_from_mean_field(
-                    env_instance, L_u_tensor.clone().detach()
-                )
+                pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
             else:
                 pi = extract_policy_from_mean_field(
-                    env_instance,
+                    env,
                     soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                         (T + 1,) + S + A
                     ),
                 )
 
-            solutions.append(pi.clone().detach())
-            scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
-            runtimes.append(time.time() - t)
+            pis.append(pi.clone().detach())
+            expls.append(exploitability_score(env, pi))
+            if expls[i] < expls[argmin]:
+                argmin = i
+            rts.append(time.time() - t_0)
 
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
+            logger.insert_row(
+                i=i,
+                expl=expls[i],
+                ratio=expls[i] / expls[0],
+                argmin=argmin,
+                elapsed=rts[i],
+            )
+            if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                logger.flush_stopped()
+                return pis, expls, rts
 
-            if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
-                return solutions, scores, runtimes
-
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
-        return solutions, scores, runtimes
+        logger.flush_exhausted()
+        return pis, expls, rts
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:

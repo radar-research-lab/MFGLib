@@ -101,11 +101,11 @@ The computed exploitability score is decreased significantly implying that the l
 approximation of an NE solution for the **Beach Bar** environment.
 
 
-You can monitor the progression of an algorithm by plotting the exploitability scores vs. the number of iterations
-as shown below.
+You can monitor the progression of an algorithm by setting its ``verbose`` parameter to a positive integer.
 
-.. plot:: plots.py plot_beach_bar_exploitability
-   :show-source-link: False
+.. jupyter-execute::
+
+   _ = online_mirror_descent.solve(beach_bar, verbose=1)
 
 More on Exploitability
 ^^^^^^^^^^^^^^^^^^^^^^

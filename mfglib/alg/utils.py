@@ -1,73 +1,15 @@
 from __future__ import annotations
 
 import warnings
-from functools import reduce
-from typing import TYPE_CHECKING, Literal, TypeVar
+from typing import TYPE_CHECKING, Literal
 
+import numpy as np
 import torch
 
-from mfglib import __version__
 from mfglib.alg.q_fn import QFn
-from mfglib.env import Environment
 
 if TYPE_CHECKING:
-    from mfglib.alg.abc import Algorithm
-
-T = TypeVar("T", int, float)
-
-
-def tuple_prod(tup: tuple[T, ...]) -> T:
-    """Compute product of the elements in a tuple."""
-    return reduce(lambda x, y: x * y, tup)
-
-
-HEADER = "| iter |  expl_n  | expl_n / expl_0 | argmin_{0..n} expl_i | time (s) |"
-
-
-def _print_fancy_header(
-    *,
-    alg_instance: Algorithm,
-    env_instance: Environment,
-    max_iter: int,
-    atol: float | None,
-    rtol: float | None,
-) -> None:
-    title = f"MFGLib v{__version__} : A Library for Mean-Field Games"
-    print("=" * len(HEADER))
-    print(f"{title:^{len(HEADER)}}")
-    print(f"{'(c) RADAR Research Lab, UC Berkeley':^{len(HEADER)}}")
-    print("=" * len(HEADER))
-    print()
-    print("Environment summary:")
-    print(f"\tS={env_instance.S}")
-    print(f"\tA{env_instance.A}")
-    print(f"\tT={env_instance.T}")
-    print(f"\tr_max={env_instance.r_max}")
-    print()
-    print("Algorithm summary:")
-    print(f"\t{alg_instance}")
-    print(f"\t{atol=}")
-    print(f"\t{rtol=}")
-    print(f"\t{max_iter=}")
-    print()
-    print("-" * len(HEADER))
-    print(HEADER)
-    print("-" * len(HEADER))
-
-
-def _print_fancy_table_row(
-    *, n: int, score_n: float, score_0: float, argmin: int, runtime_n: float
-) -> None:
-    print(
-        f"|{n:^6}|{score_n:^10.5f}|{score_n / score_0:^17.5f}"
-        f"|{argmin:^22}|{runtime_n:^10.3f}|"
-    )
-
-
-def _print_solve_complete(*, seconds_elapsed: float) -> None:
-    print("-" * len(HEADER))
-    print()
-    print(f"Solve complete ({seconds_elapsed:.3f} seconds)")
+    from mfglib.env import Environment
 
 
 def _ensure_free_tensor(
@@ -92,7 +34,6 @@ def _trigger_early_stopping(
     if atol or rtol:
         atolv = 0.0 if atol is None else atol
         rtolv = 0.0 if rtol is None else rtol
-
         return score_n <= atolv + rtolv * score_0
     else:
         return False
@@ -152,7 +93,7 @@ def extract_policy_from_mean_field(
     # Auxiliary variables
     l_s = len(S)
     l_a = len(A)
-    n_a = tuple_prod(A)
+    n_a = np.prod(A).item()
     ones_ts = (1,) * (l_s + 1)
     ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
 
@@ -182,8 +123,8 @@ def hat_initialization(
     r_max = env_instance.r_max
 
     # Auxiliary parameters
-    n_s = tuple_prod(S)
-    n_a = tuple_prod(A)
+    n_s = np.prod(S).item()
+    n_a = np.prod(A).item()
     l_a, l_s = len(A), len(S)
     ones_s = (1,) * l_s
     as_to_sa = tuple(range(l_a, l_a + l_s)) + tuple(range(l_a))

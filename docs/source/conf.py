@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "MFGLib"
-copyright = "2023, RADAR Reasearch Lab"
+copyright = "2023, RADAR Research Lab"
 author = "RADAR Research Lab"
 
 # -- General configuration ---------------------------------------------------

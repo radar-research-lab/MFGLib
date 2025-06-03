@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import time
-from typing import Literal
+from dataclasses import dataclass
 
 import numpy as np
 import optuna
@@ -9,19 +8,11 @@ import osqp
 import torch
 from scipy import sparse
 
-from mfglib.alg.abc import DEFAULT_ATOL, DEFAULT_MAX_ITER, DEFAULT_RTOL, Algorithm
+from mfglib.alg.abc import Iterative
 from mfglib.alg.mf_omo_params import mf_omo_params
-from mfglib.alg.utils import (
-    _ensure_free_tensor,
-    _print_fancy_header,
-    _print_fancy_table_row,
-    _print_solve_complete,
-    _trigger_early_stopping,
-    extract_policy_from_mean_field,
-)
+from mfglib.alg.utils import extract_policy_from_mean_field
 from mfglib.env import Environment
 from mfglib.mean_field import mean_field
-from mfglib.scoring import exploitability_score
 
 
 # TODO: Change to support warm start and update vectors to be more efficient
@@ -55,7 +46,14 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     return sol
 
 
-class OccupationMeasureInclusion(Algorithm):
+@dataclass
+class State:
+    env: Environment
+    pi: torch.Tensor
+    d: torch.Tensor
+
+
+class OccupationMeasureInclusion(Iterative[State]):
     """Mean-Field Occupation Measure Inclusion with Forward-Backward Splitting.
 
     Notes
@@ -84,102 +82,22 @@ class OccupationMeasureInclusion(Algorithm):
         """Represent algorithm instance and associated parameters with a string."""
         return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
-    def solve(
-        self,
-        env_instance: Environment,
-        *,
-        pi: Literal["uniform"] | torch.Tensor = "uniform",
-        max_iter: int = DEFAULT_MAX_ITER,
-        atol: float | None = DEFAULT_ATOL,
-        rtol: float | None = DEFAULT_RTOL,
-        verbose: bool = False,
-    ) -> tuple[list[torch.Tensor], list[float], list[float]]:
-        """Run the algorithm and solve for a Nash-Equilibrium policy.
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
+        d = mean_field(env, pi_0)
+        return State(env=env, pi=pi_0, d=d)
 
-        Args
-        ----
-        env_instance
-            An instance of a specific environment.
-        pi
-            A numpy array of size (T+1,)+S+A representing the initial policy.
-            If 'uniform', the initial policy will be the uniform distribution.
-        max_iter
-            Maximum number of iterations to run.
-        atol
-            Absolute tolerance criteria for early stopping.
-        rtol
-            Relative tolerance criteria for early stopping.
-        verbose
-            Print convergence information during iteration.
-        """
-        pi = _ensure_free_tensor(pi, env_instance)
+    def step_next_state(self, state: State) -> State:
+        d = state.d
+        d_shape = list(d.shape)
+        b, A_d, c_d = mf_omo_params(state.env, d)
+        d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+        d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+        pi = extract_policy_from_mean_field(state.env, d.clone().detach())
+        return State(env=state.env, pi=pi, d=d)
 
-        solutions = [pi]
-        argmin = 0
-        scores = [exploitability_score(env_instance, pi)]
-        runtimes = [0.0]
-
-        if verbose:
-            _print_fancy_header(
-                alg_instance=self,
-                env_instance=env_instance,
-                max_iter=max_iter,
-                atol=atol,
-                rtol=rtol,
-            )
-            _print_fancy_table_row(
-                n=0,
-                score_n=scores[0],
-                score_0=scores[0],
-                argmin=argmin,
-                runtime_n=runtimes[0],
-            )
-
-        if _trigger_early_stopping(scores[0], scores[0], atol, rtol):
-            if verbose:
-                _print_solve_complete(seconds_elapsed=runtimes[0])
-            return solutions, scores, runtimes
-
-        # initialize d = L^pi
-        d = mean_field(env_instance, pi)
-        d_shape = list(d.shape)  # non-flattened shape of d
-
-        t = time.time()
-        for n in range(1, max_iter + 1):
-            # obtain occupation-measure params
-            b, A_d, c_d = mf_omo_params(env_instance, d)
-
-            # Update d and pi
-            d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-            d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
-            pi = extract_policy_from_mean_field(env_instance, d.clone().detach())
-
-            solutions.append(
-                pi.clone().detach()
-            )  # do we need to clone + detach again? no? same for MF-OMO？
-            scores.append(exploitability_score(env_instance, pi))
-            if scores[n] < scores[argmin]:
-                argmin = n
-            runtimes.append(time.time() - t)
-
-            if verbose:
-                _print_fancy_table_row(
-                    n=n,
-                    score_n=scores[n],
-                    score_0=scores[0],
-                    argmin=argmin,
-                    runtime_n=runtimes[n],
-                )
-
-            if _trigger_early_stopping(scores[0], scores[n], atol, rtol):
-                if verbose:
-                    _print_solve_complete(seconds_elapsed=runtimes[n])
-                return solutions, scores, runtimes
-
-        if verbose:
-            _print_solve_complete(seconds_elapsed=time.time() - t)
-
-        return solutions, scores, runtimes
+    @property
+    def parameters(self) -> dict[str, float | str | None]:
+        return {"alpha": self.alpha, "eta": self.eta}
 
     @classmethod
     def _init_tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:

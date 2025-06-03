@@ -1,8 +1,8 @@
+import numpy as np
 import pytest
 import torch
 
 from mfglib.alg import OnlineMirrorDescent
-from mfglib.alg.utils import tuple_prod
 from mfglib.env import Environment
 
 
@@ -19,7 +19,7 @@ def test_beach_bar(T: int, n: int, p_still: float) -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -57,7 +57,7 @@ def test_building_evacuation(T: int, n_floor: int, floor_l: int, floor_w: int) -
     l_s = 3
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -91,7 +91,7 @@ def test_conservative_treasure_hunting(T: int, n: int) -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -129,7 +129,7 @@ def test_crowd_motion(T: int, torus_l: int, torus_w: int, p_still: float) -> Non
     l_s = 2
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -166,7 +166,7 @@ def test_equilibrium_price(T: int, s_inv: int, Q: int, H: int, sigma: float) -> 
     l_s = 1
     l_a = 2
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -198,7 +198,7 @@ def test_left_right() -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -230,7 +230,7 @@ def test_linear_quadratic() -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -265,7 +265,7 @@ def test_random_linear(T: int, n: int, m: float) -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -298,7 +298,7 @@ def test_rock_paper_scissors(T: int) -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa
@@ -331,7 +331,7 @@ def test_susceptible_infected(T: int) -> None:
     l_s = 1
     l_a = 1
 
-    L = torch.ones(size=size_tsa) / tuple_prod(size_sa)
+    L = torch.ones(size=size_tsa) / np.prod(size_sa).item()
     r = env.reward(0, L[0])
     p = env.prob(0, L[0])
     assert r.shape == size_sa

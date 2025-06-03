@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import Literal, Protocol
 
+import numpy as np
 import torch
 
 
@@ -71,6 +72,14 @@ class Environment:
 
     def prob(self, t: int, L_t: torch.Tensor) -> torch.Tensor:
         return self.transition_fn(self, t, L_t)
+
+    @property
+    def n_actions(self) -> int:
+        return np.prod(self.A).item()
+
+    @property
+    def n_states(self) -> int:
+        return np.prod(self.S).item()
 
     @classmethod
     def beach_bar(
