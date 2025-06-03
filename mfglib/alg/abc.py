@@ -7,6 +7,7 @@ import warnings
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     Generic,
     Iterable,
@@ -287,7 +288,7 @@ class Logger:
         self,
         env: Environment,
         cls: str,
-        parameters: dict[str, float | str | None],
+        parameters: dict[str, Any],
         atol: float | None,
         rtol: float | None,
         max_iter: int,
@@ -321,7 +322,7 @@ class Logger:
 
             alg_group = Group(
                 f"class = {cls}",
-                f"parameters = {pretty_repr(parameters)}",
+                f"parameters = {pretty_repr(parameters, max_width=self.INFO_PANEL_WIDTH)}",
                 f"atol = {atol}",
                 f"rtol = {rtol}",
                 f"max_iter = {max_iter}",
@@ -335,8 +336,6 @@ class Logger:
             )
 
             doc_group = Group(
-                f"- The verbosity level is set to {self.verbose}.",
-                "- Table output is printed 50 rows at a time.",
                 "- Ratio_n := Expl_n / Expl_0.",
                 "- Argmin_n := Argmin_{0≤i≤n} Expl_i.",
                 "- Elapsed_n measures time in seconds.",
@@ -368,9 +367,9 @@ class Logger:
     def flush_exhausted(self) -> None:
         if self.verbose:
             rich_print(self.table)
-            rich_print("Number of iterations exhausted.")
+            rich_print("Status: Number of iterations exhausted.")
 
     def flush_stopped(self) -> None:
         if self.verbose:
             rich_print(self.table)
-            rich_print("Absolute or relative stopping criteria met.")
+            rich_print("Status: Absolute or relative stopping criteria met.")

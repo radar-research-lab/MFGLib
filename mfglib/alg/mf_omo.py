@@ -364,7 +364,7 @@ class MFOMO(Algorithm):
                 "m3": self.m3,
                 "parameterize": self.parameterize,
                 "hat_init": self.hat_init,
-                "optimizer": self.optimizer["name"],
+                "optimizer": self.optimizer,
             },
             atol=atol,
             rtol=rtol,
