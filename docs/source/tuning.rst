@@ -26,7 +26,12 @@ Given the metric/objective, an algorithm's ``tune()`` method tests various combi
 and identifies the optimal choice.
 
 .. automethod:: mfglib.alg.abc::Algorithm.tune
-    :no-index:
+
+Notice that ``tune()`` returns an ``optuna.Study`` object. This object contains the results of the
+hyperparameter optimization process. Of course, you can extract the results manually, but for convenience
+we provide a ``from_study()`` class method to initialize a new algorithm instance.
+
+.. automethod:: mfglib.alg.abc::Algorithm.from_study
 
 Metrics
 -------
