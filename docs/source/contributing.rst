@@ -30,7 +30,7 @@ When that is complete, you can run
 
 .. code-block:: bash
 
-    $ sphinx-autobuild docs/source docs/build
+    $ poetry run sphinx-autobuild docs/source docs/build
 
 from within the project root to serve the site on your local machine. ``sphinx-autobuild`` will
 hot-reload your local version of the documentation as you make changes.
@@ -46,7 +46,7 @@ To generate a newsfragment, run the command
 
 .. code-block::
 
-    $ towncrier create -c "{description of the change}" {issue}.{type}.md
+    $ poetry run towncrier create -c "{description of the change}" {issue}.{type}.md
 
 If your change corresponds with a GitHub issue, replace ``{issue}`` with the issue number.
 If there is no corresponding GitHub issue, replace ``{issue}`` with a unique identifier starting
