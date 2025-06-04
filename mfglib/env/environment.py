@@ -91,7 +91,9 @@ class Environment:
         p_still: float = 0.5,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """The beach bar process is a Markov Decision Process with :math:`|X|`
+        """Instantiate the Beach Bar environment.
+
+        The beach bar process is a Markov Decision Process with :math:`|X|`
         states disposed on a one dimensional torus (:math:`X = {0,..., |X|-1}`), which
         represents a beach. A bar is located in one of the states. As the
         weather is very hot, players want to be as close as possible to the bar,
@@ -130,7 +132,9 @@ class Environment:
         evac_r: float = 10.0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """In this problem, there is a multilevel building and each agent of the
+        """Instantiate the Building Evacuation environment.
+
+        In this problem, there is a multilevel building and each agent of the
         crowd wants to go downstairs as quickly as possible while favoring
         social distancing. At each floor, two staircases are located at two
         opposite corners, such as the crowd has to cross the whole floor to take
@@ -168,10 +172,12 @@ class Environment:
         c: tuple[float, ...] = (1.0, 1.0, 1.0, 1.0, 1.0),
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """
+        """Instantiate the Conservative Treasure Hunting environment.
+
         .. seealso::
 
-            Refer to :cite:t:`guo2022` for further details."""
+            Refer to :cite:t:`guo2022` for further details.
+        """
         from mfglib.env.examples.conservative_treasure_hunting import (
             RewardFn,
             TransitionFn,
@@ -205,7 +211,9 @@ class Environment:
         seed: int = 0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """An adaptation of Crowd Motion environment, which extends the Beach Bar
+        """Instantiate the Crowd Motion environment.
+
+        An adaptation of Crowd Motion environment, which extends the Beach Bar
         environment in 2 dimensions.
 
         .. seealso::
@@ -244,7 +252,9 @@ class Environment:
         c: tuple[float, float, float, float, float] = (1.0, 1.0, 1.0, 1.0, 1.0),
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """In this problem, a large number of homogeneous firms producing the same
+        """Instantiate the Equilibrium Price environment.
+
+        In this problem, a large number of homogeneous firms producing the same
         product under perfect competition are considered. The price of the
         product is determined endogenously by the supply-demand equilibrium.
         Each firm, meanwhile, maintains a certain inventory level of the raw
@@ -284,7 +294,9 @@ class Environment:
     def left_right(
         cls, mu0: tuple[float, float, float] = (1.0, 0.0, 0.0)
     ) -> Environment:
-        """A large number of agents choose simultaneously between going left (L) or
+        """Instantiate the Left Right environment.
+
+        A large number of agents choose simultaneously between going left (L) or
         right (R). Afterwards, each agent shall be punished proportional to the
         number of agents that chose the same action, but more-so for choosing right
         than left.
@@ -319,10 +331,12 @@ class Environment:
         c_term: float = 1.0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """
+        """Instantiate the Linear Quadratic environment.
+
         .. seealso::
 
-            Refer to :cite:t:`perrin2020` for further details."""
+            Refer to :cite:t:`perrin2020` for further details.
+        """
         from mfglib.env.examples.linear_quadratic import RewardFn, TransitionFn
 
         n_s = 2 * el + 1
@@ -345,7 +359,9 @@ class Environment:
         seed: int = 0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """A custom environment in which the rewards and transition probabilities
+        """Instantiate the Random Linear environment.
+
+        A custom environment in which the rewards and transition probabilities
         are random affine functions of the mean-field. For transition
         probabilities to be valid, a softmax function is applied on top of the
         corresponding affine function.
@@ -368,7 +384,9 @@ class Environment:
     def rock_paper_scissors(
         cls, T: int = 1, mu0: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     ) -> Environment:
-        """This game is inspired by Shapley (1964) and their generalized non-zero-sum
+        """Instantiate the Rock Paper Scissors environment.
+
+        This game is inspired by Shapley (1964) and their generalized non-zero-sum
         version of Rock-Paper-Scissors, for which classical fictitious play would not
         converge. Each of the agents can choose between rock, paper and scissors, and
         obtains a reward proportional to double the number of beaten agents minus the
@@ -394,7 +412,9 @@ class Environment:
     def susceptible_infected(
         cls, T: int = 50, mu0: tuple[float, float] = (0.4, 0.6)
     ) -> Environment:
-        """In this problem, a large number of agents can choose between social
+        """Instantiate the Susceptible Infected environment.
+
+        In this problem, a large number of agents can choose between social
         distancing (D) or going out (U). If a susceptible (S) agent chooses social
         distancing, they may not become infected (I). Otherwise, an agent may become
         infected with a probability proportional to the number of agents being infected.
