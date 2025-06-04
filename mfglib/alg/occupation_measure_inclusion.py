@@ -62,9 +62,13 @@ class OccupationMeasureInclusion(Iterative[State]):
     as an inclusion problem with occupation-measure variables. The algorithm
     is known to have polynomial regret bounds in games with the Lasry-Lions
     monotonicity property.
+
+    .. seealso::
+
+        Refer to :cite:t:`hu2024` for additional details.
     """
 
-    def __init__(self, alpha: float = 0.001, eta: float = 0.0) -> None:
+    def __init__(self, alpha: float = 1e-3, eta: float = 0.0) -> None:
         """
 
         Attributes

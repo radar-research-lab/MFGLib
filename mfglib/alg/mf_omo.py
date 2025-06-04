@@ -176,12 +176,9 @@ class MFOMO(Algorithm):
     hat_init
         A boolean determining whether to use hat initialization.
 
-    References
-    ----------
+    .. seealso::
 
-    .. [#] Guo, Xin, et al. "MF-OMO: An Optimization Formulation of Mean-Field Games"
-            arXiv preprint (2022). https://arxiv.org/pdf/2206.09608
-
+        Refer to :cite:t:`guo2022` for additional details.
     """
 
     def __init__(

@@ -9,15 +9,15 @@ The following algorithms come pre-implemented with MFGLib.
    * - Algorithm
      - Reference
    * - Fictitious Play
-     - :cite:t:`perrin2020fictitious`
+     - :cite:t:`perrin2020`
    * - Online Mirror Descent
      - :cite:t:`perolat2021`
    * - Prior Descent
-     - :cite:t:`pmlr-v130-cui21a`
+     - :cite:t:`cui2021`
    * - Mean-Field Measure Occupation Measure Optimization
-     - :cite:t:`2022:guo`
+     - :cite:t:`guo2022`
    * - Occupation Measure Inclusion
-     - :cite:t:`2024:MFOMI`
+     - :cite:t:`hu2024`
 
 Further algorithm details are provided below. To learn how to implement your own algorithm, see
 the section on :ref:`user_defined_algorithms`.

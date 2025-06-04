@@ -66,7 +66,7 @@ if it meets two conditions:
 Example
 ^^^^^^^
 
-In this section we describe a very simple MFG environment known as **Left Right**:cite:p:`pmlr-v130-cui21a`.
+In this section we describe a very simple MFG environment known as **Left Right**:cite:p:`cui2021`.
 
 We let a large number of agents simultaneously choose between going left :math:`(\ell)` or right :math:`(\varrho)`. Afterwards,
 each agent shall be punished proportional to the number of agents that chose the same action, but more-so
@@ -107,4 +107,4 @@ Exploitability characterizes the suboptimality of a policy :math:`\pi` against m
 
 If :math:`\text{Expl}(\pi^*) \leq \epsilon` for some :math:`\epsilon \geq 0` then :math:`( \pi^*, L^{\pi^*} )`
 is said to be an :math:`\epsilon`-Nash equilibrium. If :math:`\epsilon = 0` then :math:`( \pi^*, L^{\pi^*} )` is
-an exact NE. For a more complete description of exploitability, refer to :cite:t:`2022:guo`.
+an exact NE. For a more complete description of exploitability, refer to :cite:t:`guo2022`.

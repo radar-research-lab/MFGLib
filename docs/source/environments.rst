@@ -7,17 +7,25 @@ Built-In
 MFGLib comes with 10 pre-implemented environments which can be accessed by calling the corresponding classmethods
 of ``Environment``. The pre-implemented environments are listed below:
 
+.. automethod:: mfglib.env::Environment.beach_bar
 
-* ``Environment.beach_bar()`` -- :cite:t:`perrin2020fictitious`
-* ``Environment.building_evacuation()`` -- :cite:t:`perolat2021`
-* ``Environment.conservative_treasure_hunting()`` -- :cite:t:`2022:guo`
-* ``Environment.crowd_motion()`` -- :cite:t:`perolat2021`
-* ``Environment.equilibrium_price()`` -- :cite:t:`2022:guo`
-* ``Environment.left_right()`` -- :cite:t:`pmlr-v130-cui21a`
-* ``Environment.linear_quadratic()`` -- :cite:t:`perrin2020fictitious`
-* ``Environment.random_linear()``
-* ``Environment.rock_paper_scissors()`` -- :cite:t:`pmlr-v130-cui21a`
-* ``Environment.susceptible_infected()`` -- :cite:t:`pmlr-v130-cui21a`
+.. automethod:: mfglib.env::Environment.building_evacuation
+
+.. automethod:: mfglib.env::Environment.conservative_treasure_hunting
+
+.. automethod:: mfglib.env::Environment.crowd_motion
+
+.. automethod:: mfglib.env::Environment.equilibrium_price
+
+.. automethod:: mfglib.env::Environment.left_right
+
+.. automethod:: mfglib.env::Environment.linear_quadratic
+
+.. automethod:: mfglib.env::Environment.random_linear
+
+.. automethod:: mfglib.env::Environment.rock_paper_scissors
+
+.. automethod:: mfglib.env::Environment.susceptible_infected
 
 All implemented algorithms are parameterized so that you can control the size of the state space, action space, and time
 horizon. In the following example, we create two distinct buildings, one with 10 floors each 20 by 20, and another with

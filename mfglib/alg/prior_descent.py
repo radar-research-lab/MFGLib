@@ -26,15 +26,9 @@ class PriorDescent(Iterative[State]):
     -----
     When `n_inner=None`, the algorithm is the same as GMF-V.
 
-    See [#pd1]_ and [#pd2]_ for algorithm details.
+    .. seealso::
 
-    .. [#pd1] Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
-        entropy-regularized deep reinforcement learning." International Conference
-        on Artificial Intelligence and Statistics. PMLR, 2021.
-        https://proceedings.mlr.press/v130/cui21a.html
-
-    .. [#pd2] Guo, Xin, et al. "Learning mean-field games." Advances in Neural
-        Information Processing Systems 32 (2019). https://arxiv.org/abs/1901.09585
+        Refer to :cite:t:`cui2021` and :cite:t:`guo2021` for additional details.
     """
 
     def __init__(self, eta: float = 1.0, n_inner: int | None = None) -> None:
