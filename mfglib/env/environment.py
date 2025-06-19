@@ -91,17 +91,17 @@ class Environment:
         p_still: float = 0.5,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Beach Bar environment.
+        """Instantiate the Beach Bar environment.
 
         The beach bar process is a Markov Decision Process with :math:`|X|`
         states disposed on a one dimensional torus (:math:`X = {0,..., |X|-1}`), which
         represents a beach. A bar is located in one of the states. As the
         weather is very hot, players want to be as close as possible to the bar,
-        while keeping away from too crowded areas.[#1bb]_
+        while keeping away from too crowded areas.
 
-        .. [#1bb] Perrin, Sarah, et al. "Fictitious play for mean field games:
-            Continuous time analysis and applications." Advances in Neural
-            Information Processing Systems 33 (2020): 13199-13213.
+        .. seealso::
+
+            Refer to :cite:t:`perrin2020` for further details.
         """
         from mfglib.env.examples.beach_bar import RewardFn, TransitionFn
 
@@ -132,7 +132,7 @@ class Environment:
         evac_r: float = 10.0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Building Evacuation environment.
+        """Instantiate the Building Evacuation environment.
 
         In this problem, there is a multilevel building and each agent of the
         crowd wants to go downstairs as quickly as possible while favoring
@@ -140,11 +140,12 @@ class Environment:
         opposite corners, such as the crowd has to cross the whole floor to take
         the next staircase. Each agent can remain in place, move in the 4
         directions (up, down, right, left) as well as go up or down when on a
-        staircase location.[#be]_
+        staircase location.
 
-        .. [#be] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-            descent." arXiv preprint arXiv:2103.00623 (2021).
-        """  # noqa: D401
+        .. seealso::
+
+            Refer to :cite:t:`perolat2021` for further details.
+        """
         from mfglib.env.examples.building_evacuation import RewardFn, TransitionFn
 
         S = (n_floor, floor_l, floor_w)
@@ -171,10 +172,11 @@ class Environment:
         c: tuple[float, ...] = (1.0, 1.0, 1.0, 1.0, 1.0),
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Conservative Treasure Hunting environment.
+        """Instantiate the Conservative Treasure Hunting environment.
 
-        MF-OMO: An Optimization Formulation of Mean-Field Games
-        Guo, X., Hu, A., & Zhang, J. (2022). arXiv:2206.09608.
+        .. seealso::
+
+            Refer to :cite:t:`guo2022` for further details.
         """
         from mfglib.env.examples.conservative_treasure_hunting import (
             RewardFn,
@@ -209,13 +211,14 @@ class Environment:
         seed: int = 0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Crowd Motion environment.
+        """Instantiate the Crowd Motion environment.
 
         An adaptation of Crowd Motion environment, which extends the Beach Bar
-        environment in 2 dimensions, introduced in
+        environment in 2 dimensions.
 
-        Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021).
+        .. seealso::
+
+            Refer to :cite:t:`perolat2021` for further details.
         """
         from mfglib.env.examples.crowd_motion import RewardFn, TransitionFn
 
@@ -249,7 +252,7 @@ class Environment:
         c: tuple[float, float, float, float, float] = (1.0, 1.0, 1.0, 1.0, 1.0),
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Equilibrium Price environment.
+        """Instantiate the Equilibrium Price environment.
 
         In this problem, a large number of homogeneous firms producing the same
         product under perfect competition are considered. The price of the
@@ -259,9 +262,9 @@ class Environment:
         materials to consume for production and the quantity of raw materials to
         replenish the inventory.
 
-        Guo, X., Hu, A., Xu, R., & Zhang, J. (2022).
-        A general framework for learning mean-field games.
-        Mathematics of Operations Research.
+        .. seealso::
+
+            Refer to :cite:t:`guo2022` for futher details.
         """
         from mfglib.env.examples.equilibrium_price import RewardFn, TransitionFn
 
@@ -291,17 +294,16 @@ class Environment:
     def left_right(
         cls, mu0: tuple[float, float, float] = (1.0, 0.0, 0.0)
     ) -> Environment:
-        """Left-Right environment.
+        """Instantiate the Left Right environment.
 
         A large number of agents choose simultaneously between going left (L) or
         right (R). Afterwards, each agent shall be punished proportional to the
         number of agents that chose the same action, but more-so for choosing right
         than left.
 
-        Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
-        entropy-regularized deep reinforcement learning." International Conference
-        on Artificial Intelligence and Statistics. PMLR, 2021.
-        https://proceedings.mlr.press/v130/cui21a.html
+        .. seealso::
+
+            Refer to :cite:t:`cui2021` for further details.
         """
         from mfglib.env.examples.left_right import RewardFn, TransitionFn
 
@@ -329,11 +331,11 @@ class Environment:
         c_term: float = 1.0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """Linear Quadratic environment.
+        """Instantiate the Linear Quadratic environment.
 
-        Perrin, Sarah, et al. "Fictitious play for mean field games: Continuous time
-        analysis and applications." Advances in Neural Information Processing
-        Systems 33 (2020): 13199-13213.
+        .. seealso::
+
+            Refer to :cite:t:`perrin2020` for further details.
         """
         from mfglib.env.examples.linear_quadratic import RewardFn, TransitionFn
 
@@ -357,7 +359,7 @@ class Environment:
         seed: int = 0,
         mu0: Literal["uniform"] | torch.Tensor = "uniform",
     ) -> Environment:
-        """General linear environment.
+        """Instantiate the Random Linear environment.
 
         A custom environment in which the rewards and transition probabilities
         are random affine functions of the mean-field. For transition
@@ -382,7 +384,7 @@ class Environment:
     def rock_paper_scissors(
         cls, T: int = 1, mu0: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     ) -> Environment:
-        """Rock-Paper-Scissors environment.
+        """Instantiate the Rock Paper Scissors environment.
 
         This game is inspired by Shapley (1964) and their generalized non-zero-sum
         version of Rock-Paper-Scissors, for which classical fictitious play would not
@@ -390,10 +392,9 @@ class Environment:
         obtains a reward proportional to double the number of beaten agents minus the
         number of agents beating the agent.
 
-        Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
-        entropy-regularized deep reinforcement learning." International Conference
-        on Artificial Intelligence and Statistics. PMLR, 2021.
-        https://proceedings.mlr.press/v130/cui21a.html
+        .. seealso::
+
+            Refer to :cite:t:`cui2021` for further details.
         """
         from mfglib.env.examples.rock_paper_scissors import RewardFn, TransitionFn
 
@@ -411,7 +412,7 @@ class Environment:
     def susceptible_infected(
         cls, T: int = 50, mu0: tuple[float, float] = (0.4, 0.6)
     ) -> Environment:
-        """SIS environment.
+        """Instantiate the Susceptible Infected environment.
 
         In this problem, a large number of agents can choose between social
         distancing (D) or going out (U). If a susceptible (S) agent chooses social
@@ -420,10 +421,9 @@ class Environment:
         If infected, an agent will recover with a fixed chance every time step. Both
         social distancing and being infected have an associated cost.
 
-        Cui, Kai, and Heinz Koeppl. "Approximately solving mean field games via
-        entropy-regularized deep reinforcement learning." International Conference
-        on Artificial Intelligence and Statistics. PMLR, 2021.
-        https://proceedings.mlr.press/v130/cui21a.html
+        .. seealso::
+
+            Refer to :cite:t:`cui2021` for further details.
         """
         from mfglib.env.examples.susceptible_infected import RewardFn, TransitionFn
 

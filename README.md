@@ -25,7 +25,8 @@ MFGLib supports all major platforms and can be installed with `pip`:
 $ pip install mfglib
 ```
 
-For developers who would like to contribute to this library, please refer to [CONTRIBUTING.md](https://github.com/radar-research-lab/MFGLib/blob/main/CONTRIBUTING.md) for the installation steps using `poetry` that allows developers to test their changes in real time.
+Developers who would like to contribute to the library should refer to the ``Contributing`` section on the 
+project's documentation site.
 
 ## Usage
 Here is an example that shows how to use MFGLib to define an environment called [rock paper scissors](https://mfglib.readthedocs.io/en/latest/environments.html), and solve it using [MF-OMO](https://mfglib.readthedocs.io/en/latest/algorithms.html) with default hyperparameters and tolerances, and plot the exploitability scores over iterations. 
@@ -33,7 +34,7 @@ Here is an example that shows how to use MFGLib to define an environment called 
 ```python
 from mfglib.env import Environment
 from mfglib.alg import MFOMO
-from mfglib.metrics import exploitability_score
+from mfglib.scoring import exploitability_score
 import matplotlib.pyplot as plt
 
 # Environment

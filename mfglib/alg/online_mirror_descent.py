@@ -21,12 +21,9 @@ class State:
 class OnlineMirrorDescent(Iterative[State]):
     """Online Mirror Descent algorithm.
 
-    Notes
-    -----
-    See [#omd1]_ for algorithm details.
+    .. seealso::
 
-    .. [#omd1] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021). https://arxiv.org/abs/2103.00623
+        Refer to :cite:t:`perolat2021` for additional details.
     """
 
     def __init__(self, alpha: float = 1.0) -> None:

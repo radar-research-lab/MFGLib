@@ -26,7 +26,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     P = 2 * sparse.eye(n, format="csc")
 
     # Define the q vector (-2 * a)
-    q = -2 * d.numpy()
+    q: np.ndarray = -2 * d.numpy()  # type: ignore[type-arg]
 
     # Define the constraints l and u
     l = np.concatenate([b.numpy(), np.zeros(n)])
@@ -62,9 +62,13 @@ class OccupationMeasureInclusion(Iterative[State]):
     as an inclusion problem with occupation-measure variables. The algorithm
     is known to have polynomial regret bounds in games with the Lasry-Lions
     monotonicity property.
+
+    .. seealso::
+
+        Refer to :cite:t:`hu2024` for additional details.
     """
 
-    def __init__(self, alpha: float = 1.0, eta: float = 0.0) -> None:
+    def __init__(self, alpha: float = 1e-3, eta: float = 0.0) -> None:
         """
 
         Attributes

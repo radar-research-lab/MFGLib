@@ -1,38 +1,45 @@
 Environments
 ============
 
-Pre-implemented
----------------
+Built-In
+--------
 
 MFGLib comes with 10 pre-implemented environments which can be accessed by calling the corresponding classmethods
 of ``Environment``. The pre-implemented environments are listed below:
 
+.. automethod:: mfglib.env::Environment.beach_bar
 
-* Beach Bar (:footcite:t:`perrin2020fictitious`) -- ``Environment.beach_bar()``
-* Building Evacuation (:footcite:t:`perolat2021`) -- ``Environment.building_evacuation()``
-* Conservative Treasure Hunting (:footcite:t:`2022:guo`) -- ``Environment.conservative_treasure_hunting()``
-* Crowd Motion (:footcite:t:`perolat2021`) -- ``Environment.crowd_motion()``
-* Equilibrium Price (:footcite:t:`2022:guo`) -- ``Environment.equilibrium_price()``
-* Left Right (:footcite:t:`pmlr-v130-cui21a`) -- ``Environment.left_right()``
-* Linear Quadratic (:footcite:t:`perrin2020fictitious`) -- ``Environment.linear_quadratic()``
-* Random Linear -- ``Environment.random_linear()``.
-* Rock Paper Scissors (:footcite:t:`pmlr-v130-cui21a`) -- ``Environment.rock_paper_scissors()``
-* Susceptible Infected (:footcite:t:`pmlr-v130-cui21a`) -- ``Environment.susceptible_infected()``
+.. automethod:: mfglib.env::Environment.building_evacuation
 
-All implemented environments take initialization parameters that modify the resulting instance (in terms of state and action space, underlying reward and transition probabilities, etc.) of the same environment.
-Let's look at the **Building Evacuation** environment for example. We can create distinct buildings (distinct environment instances) by changing the number of floors, the size of each floor, etc. In the following, we create two distinct buildings, one with 10 floors each 20 by 20, and another one with 100 floors each 50 by 5. 
+.. automethod:: mfglib.env::Environment.conservative_treasure_hunting
+
+.. automethod:: mfglib.env::Environment.crowd_motion
+
+.. automethod:: mfglib.env::Environment.equilibrium_price
+
+.. automethod:: mfglib.env::Environment.left_right
+
+.. automethod:: mfglib.env::Environment.linear_quadratic
+
+.. automethod:: mfglib.env::Environment.random_linear
+
+.. automethod:: mfglib.env::Environment.rock_paper_scissors
+
+.. automethod:: mfglib.env::Environment.susceptible_infected
+
+All implemented algorithms are parameterized so that you can control the size of the state space, action space, and time
+horizon. In the following example, we create two distinct buildings, one with 10 floors each 20 by 20, and another with
+100 floors each 50 by 5.
 
 .. code-block:: python
 
    from mfglib.env import Environment
    
-   building_evacuation_1 = Environment.building_evacuation(n_floor=10, floor_l=20, floor_w=20)
-   
-   building_evacuation_2 = Environment.building_evacuation(n_floor=100, floor_l=50, floor_w=5)
+   env_1 = Environment.building_evacuation(n_floor=10, floor_l=20, floor_w=20)
+   env_2 = Environment.building_evacuation(n_floor=100, floor_l=50, floor_w=5)
 
 
-
-User-defined
+User-Defined
 ------------
 
 Any environment defined in this library has the following attributes:
@@ -137,8 +144,3 @@ To get an environment instance, we set ``m=1``.  Putting it all together,
     )
 
 Refer to the MFGLib implementation of **Random Linear** for an alternative class-based implementation.
-
-References
-^^^^^^^^^^
-
-.. footbibliography::

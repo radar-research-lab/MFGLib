@@ -29,16 +29,9 @@ class FictitiousPlay(Iterative[State]):
     algorithm. When ``alpha=1``, the algorithm is the same as Fixed Point Iteration
     algorithm.
 
-    See [#fp1]_ and [#fp2]_ for algorithm details.
+    .. seealso::
 
-    .. [#fp1] Perrin, Sarah, et al. "Fictitious play for mean field games: Continuous
-        time analysis and applications." Advances in Neural Information Processing
-        Systems 33 (2020): 13199-13213. https://arxiv.org/abs/2007.03458
-
-    .. [#fp2] Perolat, Julien, et al. "Scaling up mean field games with online mirror
-        descent." arXiv preprint arXiv:2103.00623 (2021).
-        https://arxiv.org/abs/2103.00623
-
+        Refer to :cite:t:`perrin2020` and :cite:t:`perolat2021` for details.
     """
 
     def __init__(self, alpha: float | None = None) -> None:
@@ -91,3 +84,11 @@ class FictitiousPlay(Iterative[State]):
         alpha_num = trial.suggest_float("alpha_num", 0.0, 1.0)
         alpha = None if alpha_bool else alpha_num
         return FictitiousPlay(alpha=alpha)
+
+    @classmethod
+    def from_study(cls, study: optuna.Study) -> "FictitiousPlay":
+        best_params = study.best_params
+        alpha_bool = best_params.pop("alpha_bool")
+        alpha_num = best_params.pop("alpha_num")
+        alpha = None if alpha_bool else alpha_num
+        return cls(alpha=alpha)

@@ -1,45 +1,50 @@
-[tool.poetry]
+[project]
 name = "mfglib"
 version = "0.1.1"
-description = "A Library for Mean-Field Games"
-authors = [
-    "Xin Guo <xinguo@berkeley.edu>",
-    "Anran Hu <anranhu0107@gmail.com>",
-    "Matteo Santamaria <matteosantamaria@berkely.edu>",
-    "Mahan Tajrobehkar <mahan_tajrobehkar@berkeley.edu>",  
-    "Junzi Zhang <saslascroyale@gmail.com>",
-]
+description = "A Library for Mean-Field Games."
+license = { text = "MIT" }
 readme = "README.md"
-license = "MIT"
-documentation = "https://mfglib.readthedocs.io/en/latest/"
-
-[tool.poetry.dependencies]
-python = "^3.9"
-torch = "^2"
-numpy = "^2"
-optuna = "^3.0"
-osqp = "^0"
-scipy = "^1"
-rich = "^14.0.0"
+requires-python = ">=3.9"
+authors = [
+    { name = "Xin Guo", email = "xinguo@berkeley.edu" },
+    { name = "Anran Hu", email = "anranhu0107@gmail.com" },
+    { name = "Matteo Santamaria", email = "matteosantamaria@berkely.edu" },
+    { name = "Mahan Tajrobehkar", email = "mahan_tajrobehkar@berkeley.edu" },
+    { name = "Junzi Zhang", email = "saslascroyale@gmail.com" },
+]
+urls = { documentation = "https://mfglib.readthedocs.io/en/latest/" }
+dependencies = [
+    "torch~=2.0",
+    "optuna~=3.0",
+    "osqp~=0.0",
+    "numpy~=1.0 ; python_version < '3.10'",
+    "numpy~=2.0 ; python_version >= '3.10'",
+    "scipy<1.13 ; python_version < '3.10'",
+    "scipy~=1.13 ; python_version >= '3.10'",
+    "rich~=14.0",
+]
 
 [tool.poetry.group.dev.dependencies]
-isort = "6.0.0"
-black = "25.1.0"
-mypy = "1.15.0"
-ruff = "0.9.6"
-pytest = "8.3.4"
-coverage = "7.6.12"
-towncrier = "24.8.0"
+isort = "~=6.0"
+black = "~=25.0"
+mypy = "~=1.0"
+ruff = "~=0.9"
+pytest = "~=8.0"
+coverage = "~=7.0"
+towncrier = "~=24.0"
 
-[tool.poetry.group.docs]
+[tool.poetry.group.doc]
 optional = true
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "7.4.7"
-sphinx-autobuild = "2024.10.03"
-sphinxcontrib-bibtex = "2.6.3"
-matplotlib = "3.8.4"
-jupyter_sphinx = "0.5.3"
+[tool.poetry.group.doc.dependencies]
+sphinx = "~=7.4"
+sphinx-autobuild = "~=2024.10"
+sphinx-copybutton = "~=0.5"
+sphinxcontrib-bibtex = "~=2.6"
+nbsphinx = "~=0.9"
+ipykernel = "~=6.29"
+furo = "~=2024.8"
+matplotlib = "~=3.8"
 
 [tool.isort]
 profile = "black"

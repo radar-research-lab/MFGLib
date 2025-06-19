@@ -65,14 +65,120 @@ def _verify(
 
 
 class MFOMO(Algorithm):
-    """Mean-Field Occupation Measure Optimization algorithm.
+    r"""
+    **MF-OMO**, or Mean-Field Occupation Measure Inclusion, reformulates the
+    MFG as an optimization problem.
 
-    Notes
-    -----
-    See [#mf1]_ for algorithm details.
+    In its most basic form **MF-OMO** solves
 
-    .. [#mf1] MF-OMO: An Optimization Formulation of Mean-Field Games
-        Guo, X., Hu, A., & Zhang, J. (2022). arXiv:2206.09608.
+    .. math::
+
+        \text{minimize}_{L, y, z} \quad& \left \lVert A_L L - b \right \rVert_2^2 + \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + z^\top L \\
+        \text{subject to} \quad& \mathbf{1}^\top L_t = 0 \quad \forall t \in \mathcal{T} \\
+        & \mathbf{1}^\top z \leq SA(T^2 + T + 2) r_{\max} \\
+        & \left \lVert y \right \rVert_2 \leq S ( T + 1 ) ( T + 2 ) r_{\max} / 2 \\
+        & L \in \mathbb{R}_+^{\mathcal{T} \mathcal{S} \mathcal{A}} \\
+        & y \in \mathbb{R}^{\mathcal{T} \mathcal{S}} \\
+        & z \in \mathbb{R}^{\mathcal{T} \mathcal{S} \mathcal{A}}
+
+    This constrained optimization problem can be solved with a variety of methods, such
+    as Projected Gradient Descent.
+
+    **Parameterized Formulation.** Replacing the constrained optimization problem with a smooth unconstrained
+    problem enables us to use a broader range of optimization solvers. As explained in Appendix A.3[#], we can
+    reparameterize the variables in **MF-OMO** to completely eliminate the constraints. The new problem is called
+    the “parameterized” formulation. Pass ``parameterize=True`` to use this second formulation.
+
+    **Hat Initialization.** Given an initial mean-field :math:`L`, the "hat initialization" sets the initial
+    :math:`y,z` to :math:`\hat{y}(L), \hat{z}(L)` as explained in Proposition 6[#]. Pass ``hat_init=True`` to
+    enable this option.
+
+    **Redesigned Objective.** One can also assign different coefficients to the
+    three terms in the objective function, and come up with a "redesigned objective"
+
+    .. math::
+
+        c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 z^\top L
+
+    .. note::
+
+        Without loss of generality we can always let :math:`c_1 = 1`.
+
+    You can also apply different norm to the objective terms. The pre-configured options are
+     * ``"l1"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_1 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_1 + c_3 z^\top L`
+     * ``"l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 ( z^\top L)^2`
+     * ``"l1_l2"`` with objective :math:`c_1 \left \lVert A_L L - b \right \rVert_2^2 + c_2 \left \lVert A_L^\top y + z - c_L \right \rVert_2^2 + c_3 z^\top L`
+
+    **Adaptive Residual Balancing:** We can adaptively change the coefficients (:math:`c_1`, :math:`c_2`, and :math:`c_3`)
+    of the redesigned objective based on the value of their corresponding objective term. This process is controlled
+    by the three parameters, ``m1``, ``m2``, and ``m3``.
+
+    Let's denote by :math:`O_1` the value of the first objective term (depending on the norm used, it could be either
+    :math:`\left \lVert A_L L-b \right \rVert_1` or :math:`\lVert A_L L-b \rVert_2^2`), and let :math:`O_2` and
+    :math:`O_3` be the values of the second and third objective terms, respectively. When adaptive residual balancing
+    is applied, we modify the coefficients in the following way:
+
+    1. If :math:`O_1/ \max \{ O_2, O_3 \} > m_1`, then multiply ``c1`` by ``m2``.
+    2. If :math:`O_1/ \min \{ O_2, O_3 \} < m_3`, then divide ``c1`` by ``m2``.
+    3. If :math:`O_2/ \max\{ O_1, O_3 \} > m_1`, then multiply ``c2`` by ``m2``.
+    4. If :math:`O_2/ \max\{ O_1, O_3 \} > m_3`, then divide ``c2`` by ``m2``.
+
+    ``rb_freq`` determines how frequently the residual rebalancing is applied.
+
+    **Initialization:** We can set the initial policy for any algorithm using the input argument ``pi`` through the `
+    `solve()`` method.  **MF-OMO** uses the initial policy to compute the initial values of the variables :math:`L`,
+    :math:`z`, and :math:`y`. However, if you want to initialize these variables directly, you can do so by passing
+    the ``L``, ``y``, and ``z`` parameters to the constructor. If you're using the parameterized version, you should
+    instead pass ``u``, ``v``, and ``w``.
+
+    Parameters
+    ----------
+    L
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    z
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    y
+        Initialization value, used only when ``parameterize=False`` and
+        otherwise ignored.
+    u
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    v
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    w
+        Initialization value, used only when ``parameterize=True`` and
+        otherwise ignored.
+    loss
+        Determines the type of norm used in the objective function.
+    c1
+        Objective function coefficient.
+    c2
+        Objective function coefficient.
+    c3
+        Objective function coefficient.
+    rb_freq
+        Determines how often residual balancing is applied. If
+        None, residual balancing will not be applied.
+    m1
+        Residual balancing parameter.
+    m2
+        Residual balancing parameter.
+    m3
+        Residual balancing parameter.
+    optimizer
+        Name and configuration of a ``pytorch`` optimizer.
+    parameterize
+        Optionally solve the alternate "parameterized"
+        formulation.
+    hat_init
+        A boolean determining whether to use hat initialization.
+
+    .. seealso::
+
+        Refer to :cite:t:`guo2022` for additional details.
     """
 
     def __init__(
@@ -93,55 +199,8 @@ class MFOMO(Algorithm):
         m3: float = 0.1,
         optimizer: dict[str, Any] = DEFAULT_OPTIMIZER,
         parameterize: bool = False,
-        hat_init: bool = False,
+        hat_init: bool = True,
     ) -> None:
-        """Mean-field Occupation Measure Optimization algorithm.
-
-        Attributes
-        ----------
-        L
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        z
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        y
-            Initialization value, used only when `parameterize=False` and
-            otherwise ignored.
-        u
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        v
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        w
-            Initialization value, used only when `parameterize=True` and
-            otherwise ignored.
-        loss
-            Determines the type of norm used in the objective function.
-        c1
-            Objective function coefficient.
-        c2
-            Objective function coefficient.
-        c3
-            Objective function coefficient.
-        rb_freq
-            Determines how often residual balancing is applied. If
-            None, residual balancing will not be applied.
-        m1
-            Residual balancing parameter.
-        m2
-            Residual balancing parameter.
-        m3
-            Residual balancing parameter.
-        optimizer
-            Name and configuration of a Pytorch optimizer.
-        parameterize
-            Optionally solve the alternate "parameterized"
-            formulation.
-        hat_init
-            A boolean determining whether to use hat initialization.
-        """
         if loss not in ["l1", "l2", "l1_l2"]:
             raise ValueError("the valid loss arguments are 'l1', 'l2', and 'l1_l2'")
         if rb_freq is not None and rb_freq <= 0:

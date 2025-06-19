@@ -27,59 +27,57 @@ class Metric(Protocol):
 
         Args
         ----
-            pis
-                A list-of-list of policies. Each item in the outer list
-                represents an (environment, policy) pair, and each item
-                in the inner list corresponds with an algorithm iteration.
-            expls
-                A list-of-list of exploitability scores. Each item in the
-                outer list represents an (environment, policy) pair, and
-                each item in the inner list corresponds with an algorithm
-                iteration.
-            rts
-                A list-of-list of runtimes. Each item in the outer list represents
-                an (environment, policy) pair, and each item in the inner list
-                corresponds with an algorithm iteration.
-            solve_kwargs:
-                Additional arguments passed to ``solve()``.
-
-        Returns
-        -------
-        float
-            A scalar measure for the provided polices, exploitability scores, and
-            runtimes.
+        pis
+            A list-of-list of policies. Each item in the outer list
+            represents an (environment, policy) pair, and each item
+            in the inner list corresponds with an algorithm iteration.
+        expls
+            A list-of-list of exploitability scores. Each item in the
+            outer list represents an (environment, policy) pair, and
+            each item in the inner list corresponds with an algorithm
+            iteration.
+        rts
+            A list-of-list of runtimes. Each item in the outer list represents
+            an (environment, policy) pair, and each item in the inner list
+            corresponds with an algorithm iteration.
+        solve_kwargs:
+            Additional arguments passed to ``solve()``.
 
         """
         ...
 
 
 class FailureRate:
+    """
+
+    The failure rate metric tracks how many "failed" instances were encountered.
+    A call to ``solve()`` is considered a failure depending on the value of
+    ``stat``.
+
+    * If ``stat="iter"`` then a call to ``solve()`` is considered a failure if
+      the number of iterations reaches ``fail_thresh``.
+    * If ``stat="rt"`` then a call to ``solve()`` is considered a failure if
+      the runtime of the call (in seconds) reaches ``fail_thresh``.
+    * If ``stat="expl"`` then a call to ``solve()`` is considered a failure if
+      the exploitability score reaches ``fail_thresh``.
+
+    Parameters
+    ----------
+    fail_thresh
+        The failure threshold used to determine a "failed" instance. Can
+        only be ``None`` when ``stat="iter"`` or ``stat="expl"``, in which
+        case the solver's ``max_iter`` or ``atol``, respectively, is used as
+        the default threshold.
+    stat
+        The statistic to monitor during optimization.
+
+    """
+
     def __init__(
         self,
         fail_thresh: float | int | None = None,
         stat: Literal["iter", "rt", "expl"] = "expl",
     ) -> None:
-        """Failure rate metric.
-
-        Args
-        ----
-            fail_thresh
-                The failure threshold used to identify if the solver 'failed'
-                on a particular environment instance. This threshold is compared
-                against the chosen statistic (``stat``). For instance, if
-                ``stat="iter"``, it defines the maximum number of iterations
-                the solver is allowed to run before considering it to have failed. If
-                ``None``, the default threshold is determined based on the value of
-                ``stat``.
-            stat
-                The statistic to monitor during optimization. It can be one
-                of the following:
-
-                - ``iter``: the number of iterations taken by the solver.
-                - ``rt``: the runtime (in seconds) taken by the solver.
-                - ``expl``: the minimum exploitability score observed during
-                  the solution process.
-        """
         if stat not in ("iter", "rt", "expl"):
             raise ValueError("stat must be 'iter' or 'rt' or 'expl'")
         self.stat = stat
@@ -120,24 +118,19 @@ class FailureRate:
 
 
 class GeometricMean:
+    """
+
+    Parameters
+    ----------
+    shift
+        An additional shift value for the geometric mean. Defaults to zero.
+    stat
+        The statistic to be used in the mean.
+    """
+
     def __init__(
         self, shift: float = 0, stat: Literal["iter", "rt", "expl"] = "expl"
     ) -> None:
-        """Geometric mean metric.
-
-        Args
-        ----
-            shift
-                An additional shift value for the geometric mean. Defaults to zero.
-            stat
-                The statistic to monitor during optimization. It can be one
-                of the following:
-
-                - ``iter``: the number of iterations taken by the solver.
-                - ``rt``: the runtime (in seconds) taken by the solver.
-                - ``expl``: the minimum exploitability score observed during
-                  the solution process.
-        """
         if stat not in ("iter", "rt", "expl"):
             raise ValueError("stat must be 'iter' or 'rt' or 'expl'")
         self.stat = stat

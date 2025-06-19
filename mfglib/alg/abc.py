@@ -93,6 +93,25 @@ class Algorithm(abc.ABC):
     def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
         raise NotImplementedError
 
+    @classmethod
+    def from_study(cls: type[Self], study: optuna.Study) -> Self:
+        """Initialize an algorithm instance with tuned hyperparameters.
+
+        Examples
+        --------
+        >>> from mfglib.alg import PriorDescent
+        >>> from mfglib.env import Environment
+        >>> from mfglib.tuning import GeometricMean
+        >>>
+        >>> prior_descent = PriorDescent(eta=0.1, n_inner=50)
+        >>> study = prior_descent.tune(
+        ...     metric=GeometricMean(),
+        ...     envs=[Environment.random_linear(T=4, n=3, m=4.0)],
+        ... )
+        >>> prior_descent_tuned = PriorDescent.from_study(study)
+        """
+        return cls(**study.best_params)
+
     def tune(
         self,
         metric: Metric,
