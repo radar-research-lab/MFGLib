@@ -29,10 +29,10 @@ def osqp_proj(
     d: torch.Tensor,
     b: torch.Tensor,
     A: torch.Tensor,
-    x0: NDArray[Any],
-    y0: NDArray[Any],
-    eps_abs: float | None = 1e-8,
-    eps_rel: float | None = 1e-8,
+    x0: NDArray[Any] | None,
+    y0: NDArray[Any] | None,
+    eps_abs: float,
+    eps_rel: float,
 ) -> tuple[torch.Tensor, NDArray[Any], NDArray[Any]]:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
@@ -42,7 +42,7 @@ def osqp_proj(
     P = 2 * sparse.eye(n, format="csc")
 
     # Define the q vector (-2 * a)
-    q: np.ndarray = -2 * d.numpy()  # type: ignore[type-arg]
+    q: NDArray[Any] = -2 * d.numpy()
 
     # Define the constraints l and u
     l = np.concatenate([b.numpy(), np.zeros(n)])
@@ -71,8 +71,6 @@ class State:
     env: Environment
     pi: torch.Tensor
     d: torch.Tensor
-    osqp_atol: float | None
-    osqp_rtol: float | None
     x0: torch.Tensor | None = None
     y0: torch.Tensor | None = None
 
@@ -96,8 +94,8 @@ class OccupationMeasureInclusion(Iterative[State]):
         self,
         alpha: float = 1e-3,
         eta: float = 0.0,
-        osqp_atol: float | None = None,
-        osqp_rtol: float | None = None,
+        osqp_atol: float = 1e-3,
+        osqp_rtol: float = 1e-3,
     ) -> None:
         """
 
@@ -122,36 +120,21 @@ class OccupationMeasureInclusion(Iterative[State]):
         """Represent algorithm instance and associated parameters with a string."""
         return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
-    def init_state(
-        self,
-        env: Environment,
-        pi_0: torch.Tensor,
-        atol: float | None,
-        rtol: float | None,
-    ) -> State:
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         d = mean_field(env, pi_0)
-        return State(
-            env=env,
-            pi=pi_0,
-            d=d,
-            osqp_atol=atol if self.osqp_atol is None else self.osqp_atol,
-            osqp_rtol=rtol if self.osqp_rtol is None else self.osqp_rtol,
-        )
+        return State(env=env, pi=pi_0, d=d)
 
     def step_next_state(self, state: State) -> State:
         d = state.d
-        osqp_atol, osqp_rtol = state.osqp_atol, state.osqp_rtol
         x0, y0 = state.x0, state.y0
         d_shape = list(d.shape)
         b, A_d, c_d = mf_omo_params(state.env, d)
         d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
-        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
+        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, self.osqp_atol, self.osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
         pi = extract_policy_from_mean_field(state.env, d.clone().detach())
-        return State(
-            env=state.env, pi=pi, d=d, osqp_atol=osqp_atol, osqp_rtol=osqp_rtol
-        )
+        return State(env=state.env, pi=pi, d=d)
 
     @property
     def parameters(self) -> dict[str, float | str | None]:

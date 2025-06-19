@@ -228,7 +228,7 @@ class Iterative(Algorithm, Generic[T]):
         expls = [expl_score(env, pi_0)]
         rts = [0.0]
 
-        state = self.init_state(env, pi_0, atol, rtol)
+        state = self.init_state(env, pi_0)
 
         logger = Logger(verbose, print_every)
         logger.display_info(
@@ -274,13 +274,7 @@ class Iterative(Algorithm, Generic[T]):
         return pis, expls, rts
 
     @abc.abstractmethod
-    def init_state(
-        self,
-        env: Environment,
-        pi_0: torch.Tensor,
-        atol: float | None,
-        rtol: float | None,
-    ) -> T:
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> T:
         raise NotImplementedError
 
     @abc.abstractmethod

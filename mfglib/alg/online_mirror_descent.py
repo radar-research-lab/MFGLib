@@ -46,13 +46,7 @@ class OnlineMirrorDescent(Iterative[State]):
         """Represent algorithm instance and associated parameters with a string."""
         return f"OnlineMirrorDescent(alpha={self.alpha})"
 
-    def init_state(
-        self,
-        env: Environment,
-        pi_0: torch.Tensor,
-        atol: float | None,
-        rtol: float | None,
-    ) -> State:
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(env=env, pi=pi_0, y=torch.zeros(env.T + 1, *env.S, *env.A))
 
     def step_next_state(self, state: State) -> State:

@@ -60,13 +60,7 @@ class PriorDescent(Iterative[State]):
         """Represent algorithm instance and associated parameters with a string."""
         return f"PriorDescent(eta={self.eta}, n_inner={self.n_inner})"
 
-    def init_state(
-        self,
-        env: Environment,
-        pi_0: torch.Tensor,
-        atol: float | None,
-        rtol: float | None,
-    ) -> State:
+    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(i=0, env=env, pi=pi_0, q=pi_0.clone())
 
     def step_next_state(self, state: State) -> State:
