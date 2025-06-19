@@ -22,6 +22,7 @@ dependencies = [
     "scipy<1.13 ; python_version < '3.10'",
     "scipy~=1.13 ; python_version >= '3.10'",
     "rich~=14.0",
+    "typing-extensions ; python_version < '3.11'"
 ]
 
 [tool.poetry.group.dev.dependencies]

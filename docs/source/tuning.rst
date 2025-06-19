@@ -29,7 +29,7 @@ and identifies the optimal choice.
 
 Notice that ``tune()`` returns an ``optuna.Study`` object. This object contains the results of the
 hyperparameter optimization process. Of course, you can extract the results manually, but for convenience
-we provide a ``from_study()`` class method to initialize a new algorithm instance.
+we provide a ``from_study()`` instance method to initialize a new algorithm instance.
 
 .. automethod:: mfglib.alg.abc::Algorithm.from_study
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import json
+import sys
 import time
 import warnings
 from pathlib import Path
@@ -13,11 +14,15 @@ from typing import (
     Iterable,
     Literal,
     Protocol,
-    Self,
     Sequence,
     TypedDict,
     TypeVar,
 )
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import optuna
 import torch

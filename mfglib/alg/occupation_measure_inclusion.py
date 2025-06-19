@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import numpy as np
 import optuna
@@ -139,7 +145,8 @@ class OccupationMeasureInclusion(Iterative[State]):
         d_shape = list(d.shape)
         b, A_d, c_d = mf_omo_params(state.env, d)
         d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type]
+        # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
+        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
         pi = extract_policy_from_mean_field(state.env, d.clone().detach())
         return State(
