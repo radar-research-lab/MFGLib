@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 import optuna
 import torch
@@ -516,8 +516,7 @@ class MFOMO(Algorithm):
         logger.flush_exhausted()
         return pis, expls, rts
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
         rb_freq_num = trial.suggest_int("rb_freq_num", 1, 201, step=10)
         rb_freq = None if rb_freq_bool else rb_freq_num
@@ -527,8 +526,7 @@ class MFOMO(Algorithm):
                 "lr": trial.suggest_float("lr", 1e-3, 1e3, log=True),
             },
         }
-
-        return MFOMO(
+        return type(self)(
             loss=trial.suggest_categorical(  # type: ignore[arg-type]
                 "loss", ["l1", "l2", "l1_l2"]
             ),
@@ -542,3 +540,32 @@ class MFOMO(Algorithm):
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
             hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
+
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        expected_params = {
+            "loss",
+            "c1",
+            "c2",
+            "rb_freq_bool",
+            "rb_freq_num",
+            "m1",
+            "m2",
+            "m3",
+            "parameterize",
+            "name",
+            "lr",
+        }
+        err_msg = f"{study.best_params.keys()=} != {expected_params}."
+        assert study.best_params.keys() == expected_params, err_msg
+
+        best_params = study.best_params
+        rb_freq_bool = best_params.pop("rb_freq_bool")
+        rb_freq_num = best_params.pop("rb_freq_num")
+        rb_freq = None if rb_freq_bool else rb_freq_num
+
+        optimizer = {
+            "name": best_params.pop("name"),
+            "config": {"lr": best_params.pop("lr")},
+        }
+
+        return type(self)(rb_freq=rb_freq, optimizer=optimizer, **best_params)

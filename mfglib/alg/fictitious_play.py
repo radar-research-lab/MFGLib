@@ -52,7 +52,13 @@ class FictitiousPlay(Iterative[State]):
         """Represent algorithm instance and associated parameters with a string."""
         return f"FictitiousPlay(alpha={self.alpha})"
 
-    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
+    def init_state(
+        self,
+        env: Environment,
+        pi_0: torch.Tensor,
+        atol: float | None,
+        rtol: float | None,
+    ) -> State:
         return State(i=0, env=env, pi=pi_0)
 
     def step_next_state(self, state: State) -> State:
@@ -78,6 +84,5 @@ class FictitiousPlay(Iterative[State]):
     def parameters(self) -> dict[str, float | str | None]:
         return {"alpha": self.alpha}
 
-    @classmethod
-    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
-        return cls(alpha=trial.suggest_float("alpha", 0.0, 1.0))
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
+        return type(self)(alpha=trial.suggest_float("alpha", 0.0, 1.0))

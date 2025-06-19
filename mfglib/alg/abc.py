@@ -13,6 +13,7 @@ from typing import (
     Iterable,
     Literal,
     Protocol,
+    Self,
     Sequence,
     TypedDict,
     TypeVar,
@@ -38,8 +39,6 @@ from mfglib.scoring import exploitability_score as expl_score
 if TYPE_CHECKING:
     from mfglib.tuning import Metric
 
-
-Self = TypeVar("Self", bound="Algorithm")
 
 DEFAULT_MAX_ITER: Final = 100
 DEFAULT_ATOL: Final = 1e-3
@@ -88,13 +87,12 @@ class Algorithm(abc.ABC):
         """Represent algorithm instance and associated parameters with a string."""
         raise NotImplementedError
 
-    @classmethod
     @abc.abstractmethod
-    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         raise NotImplementedError
 
-    @classmethod
-    def from_study(cls: type[Self], study: optuna.Study) -> Self:
+    @abc.abstractmethod
+    def from_study(self: Self, study: optuna.Study) -> Self:
         """Initialize an algorithm instance with tuned hyperparameters.
 
         Examples
@@ -108,9 +106,9 @@ class Algorithm(abc.ABC):
         ...     metric=GeometricMean(),
         ...     envs=[Environment.random_linear(T=4, n=3, m=4.0)],
         ... )
-        >>> prior_descent_tuned = PriorDescent.from_study(study)
+        >>> prior_descent_tuned = prior_descent.from_study(study)
         """
-        return cls(**study.best_params)
+        raise NotImplementedError
 
     def tune(
         self,
@@ -225,7 +223,7 @@ class Iterative(Algorithm, Generic[T]):
         expls = [expl_score(env, pi_0)]
         rts = [0.0]
 
-        state = self.init_state(env, pi_0)
+        state = self.init_state(env, pi_0, atol, rtol)
 
         logger = Logger(verbose, print_every)
         logger.display_info(
@@ -271,7 +269,13 @@ class Iterative(Algorithm, Generic[T]):
         return pis, expls, rts
 
     @abc.abstractmethod
-    def init_state(self, env: Environment, pi_0: torch.Tensor) -> T:
+    def init_state(
+        self,
+        env: Environment,
+        pi_0: torch.Tensor,
+        atol: float | None,
+        rtol: float | None,
+    ) -> T:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -282,6 +286,12 @@ class Iterative(Algorithm, Generic[T]):
     @abc.abstractmethod
     def parameters(self) -> dict[str, float | str | None]:
         raise NotImplementedError
+
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        err_msg = f"{study.best_params.keys()=} != {self.parameters.keys()}."
+        assert study.best_params.keys() == self.parameters.keys(), err_msg
+
+        return type(self)(**study.best_params)
 
 
 class Logger:

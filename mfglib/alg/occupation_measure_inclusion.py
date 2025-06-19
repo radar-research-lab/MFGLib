@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Self
 
 import numpy as np
 import optuna
 import osqp
 import torch
+from numpy.typing import NDArray
 from scipy import sparse
 
 from mfglib.alg.abc import Iterative
@@ -17,7 +19,15 @@ from mfglib.mean_field import mean_field
 
 # TODO: Change to support warm start and update vectors to be more efficient
 #  https://osqp.org/docs/interfaces/python.html#python-interface
-def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor:
+def osqp_proj(
+    d: torch.Tensor,
+    b: torch.Tensor,
+    A: torch.Tensor,
+    x0: NDArray[Any],
+    y0: NDArray[Any],
+    eps_abs: float | None = 1e-8,
+    eps_rel: float | None = 1e-8,
+) -> tuple[torch.Tensor, NDArray[Any], NDArray[Any]]:
     """Project d onto Ad=b, d>=0."""
     # Problem dimensions
     n = d.size(dim=0)
@@ -36,14 +46,18 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     A_constraint = sparse.vstack([A.numpy(), sparse.eye(n, format="csc")], format="csc")
 
     prob = osqp.OSQP()
-    prob.setup(P, q, A_constraint, l, u, verbose=False, eps_abs=1e-8, eps_rel=1e-8)
+    prob.setup(
+        P, q, A_constraint, l, u, verbose=False, eps_abs=eps_abs, eps_rel=eps_rel
+    )
+    if x0 is not None and y0 is not None:
+        prob.warm_start(x=x0, y=y0)
     res = prob.solve()
 
     # numpy default is double which is fine; but to get matmul(A, sol) work needs
     # both to be same type
     sol = torch.tensor(res.x).float()
 
-    return sol
+    return sol, res.x, res.y
 
 
 @dataclass
@@ -51,6 +65,10 @@ class State:
     env: Environment
     pi: torch.Tensor
     d: torch.Tensor
+    osqp_atol: float | None
+    osqp_rtol: float | None
+    x0: torch.Tensor | None = None
+    y0: torch.Tensor | None = None
 
 
 class OccupationMeasureInclusion(Iterative[State]):
@@ -68,7 +86,13 @@ class OccupationMeasureInclusion(Iterative[State]):
         Refer to :cite:t:`hu2024` for additional details.
     """
 
-    def __init__(self, alpha: float = 1e-3, eta: float = 0.0) -> None:
+    def __init__(
+        self,
+        alpha: float = 1e-3,
+        eta: float = 0.0,
+        osqp_atol: float | None = None,
+        osqp_rtol: float | None = None,
+    ) -> None:
         """
 
         Attributes
@@ -78,33 +102,69 @@ class OccupationMeasureInclusion(Iterative[State]):
         eta
             Non-negative perturbation coefficient. Increasing eta can accelerate convergence at
             the cost of asymptotic suboptimality.
+        osqp_atol
+            Absolute tolerance criteria for early stopping of OSQP projection inner steps.
+        osqp_rtol
+            Relative tolerance criteria for early stopping of OSQP projection inner steps.
         """
         self.alpha = alpha
         self.eta = eta
+        self.osqp_atol = osqp_atol
+        self.osqp_rtol = osqp_rtol
 
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
         return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
-    def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
+    def init_state(
+        self,
+        env: Environment,
+        pi_0: torch.Tensor,
+        atol: float | None,
+        rtol: float | None,
+    ) -> State:
         d = mean_field(env, pi_0)
-        return State(env=env, pi=pi_0, d=d)
+        return State(
+            env=env,
+            pi=pi_0,
+            d=d,
+            osqp_atol=atol if self.osqp_atol is None else self.osqp_atol,
+            osqp_rtol=rtol if self.osqp_rtol is None else self.osqp_rtol,
+        )
 
     def step_next_state(self, state: State) -> State:
         d = state.d
+        osqp_atol, osqp_rtol = state.osqp_atol, state.osqp_rtol
+        x0, y0 = state.x0, state.y0
         d_shape = list(d.shape)
         b, A_d, c_d = mf_omo_params(state.env, d)
         d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
-        d = osqp_proj(d.flatten(), b, A_d).reshape(*d_shape)
+        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type]
+        d = d.reshape(*d_shape)
         pi = extract_policy_from_mean_field(state.env, d.clone().detach())
-        return State(env=state.env, pi=pi, d=d)
+        return State(
+            env=state.env, pi=pi, d=d, osqp_atol=osqp_atol, osqp_rtol=osqp_rtol
+        )
 
     @property
     def parameters(self) -> dict[str, float | str | None]:
         return {"alpha": self.alpha, "eta": self.eta}
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> OccupationMeasureInclusion:
-        return OccupationMeasureInclusion(
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
+        return type(self)(
             alpha=trial.suggest_float("alpha", 1e-10, 1e3, log=True),
+            eta=self.eta,
+            osqp_atol=self.osqp_atol,
+            osqp_rtol=self.osqp_rtol,
+        )
+
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        err_msg = f"{study.best_params.keys()=} but should only contain 'alpha'."
+        assert study.best_params.keys() == {"alpha"}, err_msg
+
+        return type(self)(
+            **study.best_params,
+            eta=self.eta,
+            osqp_atol=self.osqp_atol,
+            osqp_rtol=self.osqp_rtol,
         )
