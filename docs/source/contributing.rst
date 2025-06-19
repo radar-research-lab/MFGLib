@@ -24,7 +24,7 @@ locally, run
 
 .. code-block:: bash
 
-    $ poetry install --with docs
+    $ poetry install --with doc
 
 When that is complete, you can run
 

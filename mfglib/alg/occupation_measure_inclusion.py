@@ -26,7 +26,7 @@ def osqp_proj(d: torch.Tensor, b: torch.Tensor, A: torch.Tensor) -> torch.Tensor
     P = 2 * sparse.eye(n, format="csc")
 
     # Define the q vector (-2 * a)
-    q = -2 * d.numpy()
+    q: np.ndarray = -2 * d.numpy()  # type: ignore[type-arg]
 
     # Define the constraints l and u
     l = np.concatenate([b.numpy(), np.zeros(n)])
