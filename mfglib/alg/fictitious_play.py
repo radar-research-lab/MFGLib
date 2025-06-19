@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Self
 
 import optuna
 import torch
@@ -25,7 +26,7 @@ class FictitiousPlay(Iterative[State]):
     -----
     The implementation is based on Fictitious Play Damped.
 
-    When ``alpha=None``, the algorithm is the same as the original Fictitious Play
+    When ``alpha=0.0``, the algorithm is the same as the original Fictitious Play
     algorithm. When ``alpha=1``, the algorithm is the same as Fixed Point Iteration
     algorithm.
 
@@ -34,18 +35,17 @@ class FictitiousPlay(Iterative[State]):
         Refer to :cite:t:`perrin2020` and :cite:t:`perolat2021` for details.
     """
 
-    def __init__(self, alpha: float | None = None) -> None:
+    def __init__(self, alpha: float = 0.0) -> None:
         """Fictitious Play algorithm.
 
         Attributes
         ----------
         alpha
-            Learning rate hyperparameter. If None, in iteration n the
+            Learning rate hyperparameter. If set to 0.0, in iteration n the
             learning rate is 1 / (n + 1).
         """
-        if alpha:
-            if not isinstance(alpha, (int, float)) or not 0 <= alpha <= 1:
-                raise ValueError("if not None, `alpha` must be a float in [0, 1]")
+        if not isinstance(alpha, (int, float)) or not 0 <= alpha <= 1:
+            raise ValueError("parameter 'alpha' must be a float in [0, 1]")
         self.alpha = alpha
 
     def __str__(self) -> str:
@@ -79,16 +79,5 @@ class FictitiousPlay(Iterative[State]):
         return {"alpha": self.alpha}
 
     @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> FictitiousPlay:
-        alpha_bool = trial.suggest_categorical("alpha_bool", [False, True])
-        alpha_num = trial.suggest_float("alpha_num", 0.0, 1.0)
-        alpha = None if alpha_bool else alpha_num
-        return FictitiousPlay(alpha=alpha)
-
-    @classmethod
-    def from_study(cls, study: optuna.Study) -> "FictitiousPlay":
-        best_params = study.best_params
-        alpha_bool = best_params.pop("alpha_bool")
-        alpha_num = best_params.pop("alpha_num")
-        alpha = None if alpha_bool else alpha_num
-        return cls(alpha=alpha)
+    def _init_tuner_instance(cls: type[Self], trial: optuna.Trial) -> Self:
+        return cls(alpha=trial.suggest_float("alpha", 0.0, 1.0))

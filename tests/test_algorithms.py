@@ -131,9 +131,8 @@ def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> No
     )
 
 
-@pytest.mark.parametrize("alpha", [None, 1.0])
-def test_fictitious_play_save_and_load(alpha: float | None) -> None:
-    fp = FictitiousPlay(alpha=alpha)
+def test_fictitious_play_save_and_load() -> None:
+    fp = FictitiousPlay(alpha=0.5)
     with TemporaryDirectory() as tmpdir:
         fp.save(tmpdir)
         fp2 = FictitiousPlay.load(tmpdir)
