@@ -560,6 +560,7 @@ class MFOMO(Algorithm):
             "parameterize",
             "name",
             "lr",
+            "hat_init",
         }
         err_msg = f"{study.best_params.keys()=} != {expected_params}."
         assert study.best_params.keys() == expected_params, err_msg

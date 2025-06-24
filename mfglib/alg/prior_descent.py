@@ -104,5 +104,9 @@ class PriorDescent(Iterative[State]):
         expected_params = {"n_inner_bool", "n_inner_num", "eta"}
         err_msg = f"{study.best_params.keys()=} != {expected_params}."
         assert study.best_params.keys() == expected_params, err_msg
+        if study.best_params["n_inner_bool"]:
 
-        return type(self)(**study.best_params)
+            n_inner_bool = study.best_params["n_inner_num"]
+        else:
+            n_inner_bool = None
+        return type(self)(eta=study.best_params["eta"], n_inner=n_inner_bool)
