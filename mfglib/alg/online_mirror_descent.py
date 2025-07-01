@@ -49,7 +49,9 @@ class OnlineMirrorDescent(Iterative[State]):
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(env=env, pi=pi_0, y=torch.zeros(env.T + 1, *env.S, *env.A))
 
-    def step_next_state(self, state: State) -> State:
+    def step_next_state(
+        self, state: State, atol: float | None, rtol: float | None
+    ) -> State:
         L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi)
         y = state.y + self.alpha * Q

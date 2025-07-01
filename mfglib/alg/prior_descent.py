@@ -63,7 +63,9 @@ class PriorDescent(Iterative[State]):
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(i=0, env=env, pi=pi_0, q=pi_0.clone())
 
-    def step_next_state(self, state: State) -> State:
+    def step_next_state(
+        self, state: State, atol: float | None, rtol: float | None
+    ) -> State:
         L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).optimal() / self.eta
 

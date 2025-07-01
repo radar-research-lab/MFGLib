@@ -253,7 +253,7 @@ class Iterative(Algorithm, Generic[T]):
 
         t_0 = time.time()
         for i in range(1, max_iter + 1):
-            state = self.step_next_state(state)
+            state = self.step_next_state(state, atol, rtol)
             pis += [state.pi]
             expls += [expl_score(env, pis[i])]
             rts += [time.time() - t_0]
@@ -278,7 +278,7 @@ class Iterative(Algorithm, Generic[T]):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def step_next_state(self, state: T) -> T:
+    def step_next_state(self, state: T, atol: float | None, rtol: float | None) -> T:
         raise NotImplementedError
 
     @property

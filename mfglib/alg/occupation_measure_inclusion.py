@@ -94,8 +94,8 @@ class OccupationMeasureInclusion(Iterative[State]):
         self,
         alpha: float = 1e-3,
         eta: float = 0.0,
-        osqp_atol: float = 1e-3,
-        osqp_rtol: float = 1e-3,
+        osqp_atol: float | None = None,
+        osqp_rtol: float | None = None,
     ) -> None:
         """
 
@@ -124,14 +124,27 @@ class OccupationMeasureInclusion(Iterative[State]):
         d = mean_field(env, pi_0)
         return State(env=env, pi=pi_0, d=d)
 
-    def step_next_state(self, state: State) -> State:
+    def step_next_state(
+        self, state: State, atol: float | None, rtol: float | None
+    ) -> State:
         d = state.d
         x0, y0 = state.x0, state.y0
         d_shape = list(d.shape)
         b, A_d, c_d = mf_omo_params(state.env, d)
         d -= self.alpha * (c_d.reshape(*d_shape) + self.eta * d)
+
+        if self.osqp_atol is None:
+            osqp_atol = 1e-8 if atol is None else atol
+        else:
+            osqp_atol = self.osqp_atol
+
+        if self.osqp_rtol is None:
+            osqp_rtol = 1e-8 if rtol is None else rtol
+        else:
+            osqp_rtol = self.osqp_rtol
+
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
-        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, self.osqp_atol, self.osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
+        d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
         pi = extract_policy_from_mean_field(state.env, d.clone().detach())
         return State(env=state.env, pi=pi, d=d)
