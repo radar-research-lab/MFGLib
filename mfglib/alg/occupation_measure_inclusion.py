@@ -71,8 +71,8 @@ class State:
     env: Environment
     pi: torch.Tensor
     d: torch.Tensor
-    x0: torch.Tensor | None = None
-    y0: torch.Tensor | None = None
+    x0: torch.Tensor | None
+    y0: torch.Tensor | None
 
 
 class OccupationMeasureInclusion(Iterative[State]):
@@ -96,6 +96,7 @@ class OccupationMeasureInclusion(Iterative[State]):
         eta: float = 0.0,
         osqp_atol: float | None = None,
         osqp_rtol: float | None = None,
+        osqp_warmstart: bool = True,
     ) -> None:
         """
 
@@ -110,11 +111,14 @@ class OccupationMeasureInclusion(Iterative[State]):
             Absolute tolerance criteria for early stopping of OSQP projection inner steps.
         osqp_rtol
             Relative tolerance criteria for early stopping of OSQP projection inner steps.
+        osqp_warmstart
+            Reuse previously found projections in osqp.
         """
         self.alpha = alpha
         self.eta = eta
         self.osqp_atol = osqp_atol
         self.osqp_rtol = osqp_rtol
+        self.osqp_warmstart = osqp_warmstart
 
     def __str__(self) -> str:
         """Represent algorithm instance and associated parameters with a string."""
@@ -122,7 +126,7 @@ class OccupationMeasureInclusion(Iterative[State]):
 
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         d = mean_field(env, pi_0)
-        return State(env=env, pi=pi_0, d=d)
+        return State(env=env, pi=pi_0, d=d, x0=None, y0=None)
 
     def step_next_state(
         self, state: State, atol: float | None, rtol: float | None
@@ -147,7 +151,11 @@ class OccupationMeasureInclusion(Iterative[State]):
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
         pi = extract_policy_from_mean_field(state.env, d.clone().detach())
-        return State(env=state.env, pi=pi, d=d)
+
+        if self.osqp_warmstart:
+            return State(env=state.env, pi=pi, d=d, x0=x0, y0=y0)
+        else:
+            return State(env=state.env, pi=pi, d=d, x0=None, y0=None)
 
     @property
     def parameters(self) -> dict[str, float | str | None]:
