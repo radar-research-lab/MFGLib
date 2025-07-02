@@ -178,4 +178,5 @@ class OccupationMeasureInclusion(Iterative[State]):
             eta=self.eta,
             osqp_atol=self.osqp_atol,
             osqp_rtol=self.osqp_rtol,
+            osqp_warmstart=self.osqp_warmstart,
         )
