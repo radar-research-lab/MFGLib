@@ -414,7 +414,7 @@ class MFOMO(Algorithm):
         expls = [exploitability_score(env, pi)]
         rts = [0.0]
 
-        logger = Logger(verbose, print_every)
+        logger = Logger(verbose)
         logger.display_info(
             env=env,
             cls=f"{self.__class__.__name__}",
@@ -504,21 +504,36 @@ class MFOMO(Algorithm):
 
             pis.append(pi.clone().detach())
             expls.append(exploitability_score(env, pi))
+            rts.append(time.time() - t_0)
             if expls[i] < expls[argmin]:
                 argmin = i
-            rts.append(time.time() - t_0)
-
-            logger.insert_row(
-                i=i,
-                expl=expls[i],
-                ratio=expls[i] / expls[0],
-                argmin=argmin,
-                elapsed=rts[i],
-            )
+            if i % print_every == 0:
+                logger.insert_row(
+                    i=i,
+                    expl=expls[i],
+                    ratio=expls[i] / expls[0],
+                    argmin=argmin,
+                    elapsed=rts[i],
+                )
             if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                if i % print_every != 0:
+                    logger.insert_row(
+                        i=i,
+                        expl=expls[i],
+                        ratio=expls[i] / expls[0],
+                        argmin=argmin,
+                        elapsed=rts[i],
+                    )
                 logger.flush_stopped()
                 return pis, expls, rts
 
+        logger.insert_row(
+            i=max_iter,
+            expl=expls[max_iter],
+            ratio=expls[max_iter] / expls[0],
+            argmin=argmin,
+            elapsed=rts[max_iter],
+        )
         logger.flush_exhausted()
         return pis, expls, rts
 

@@ -230,7 +230,7 @@ class Iterative(Algorithm, Generic[T]):
 
         state = self.init_state(env, pi_0)
 
-        logger = Logger(verbose, print_every)
+        logger = Logger(verbose)
         logger.display_info(
             env=env,
             cls=f"{self.__class__.__name__}",
@@ -259,17 +259,33 @@ class Iterative(Algorithm, Generic[T]):
             rts += [time.time() - t_0]
             if expls[i] < expls[argmin]:
                 argmin = i
-            logger.insert_row(
-                i=i,
-                expl=expls[i],
-                ratio=expls[i] / expls[0],
-                argmin=argmin,
-                elapsed=rts[i],
-            )
+            if i % print_every == 0:
+                logger.insert_row(
+                    i=i,
+                    expl=expls[i],
+                    ratio=expls[i] / expls[0],
+                    argmin=argmin,
+                    elapsed=rts[i],
+                )
             if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                if i % print_every != 0:
+                    logger.insert_row(
+                        i=i,
+                        expl=expls[i],
+                        ratio=expls[i] / expls[0],
+                        argmin=argmin,
+                        elapsed=rts[i],
+                    )
                 logger.flush_stopped()
                 return pis, expls, rts
 
+        logger.insert_row(
+            i=max_iter,
+            expl=expls[max_iter],
+            ratio=expls[max_iter] / expls[0],
+            argmin=argmin,
+            elapsed=rts[max_iter],
+        )
         logger.flush_exhausted()
         return pis, expls, rts
 
@@ -297,9 +313,8 @@ class Logger:
     INFO_PANEL_WIDTH: Final = 61
     MAX_TABLE_LENGTH: Final = 50
 
-    def __init__(self, verbose: bool, print_every: int) -> None:
+    def __init__(self, verbose: bool) -> None:
         self.verbose = verbose
-        self.print_every = print_every
         self.table = self.create_empty_table()
 
     @staticmethod
@@ -380,7 +395,7 @@ class Logger:
     def insert_row(
         self, i: int, expl: float, ratio: float, argmin: int, elapsed: float
     ) -> None:
-        if self.verbose and i % self.print_every == 0:
+        if self.verbose:
             self.table.add_row(
                 f"{i}",
                 f"{expl:.4e}",

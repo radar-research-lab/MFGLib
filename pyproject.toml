@@ -44,6 +44,7 @@ sphinx-copybutton = "~=0.5"
 sphinxcontrib-bibtex = "~=2.6"
 nbsphinx = "~=0.9"
 ipykernel = "~=6.29"
+ipywidgets = "~=8.1"
 furo = "~=2024.8"
 matplotlib = "~=3.8"
 
