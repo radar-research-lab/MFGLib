@@ -147,6 +147,8 @@ class OccupationMeasureInclusion(Iterative[State]):
         else:
             osqp_rtol = self.osqp_rtol
 
+        # print(f"DEBUG: {osqp_rtol=}, {osqp_atol=}, {self.osqp_warmstart=}")
+
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
@@ -167,6 +169,7 @@ class OccupationMeasureInclusion(Iterative[State]):
             eta=self.eta,
             osqp_atol=self.osqp_atol,
             osqp_rtol=self.osqp_rtol,
+            osqp_warmstart=self.osqp_warmstart,
         )
 
     def from_study(self: Self, study: optuna.Study) -> Self:
