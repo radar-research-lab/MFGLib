@@ -67,7 +67,9 @@ print([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned])
 
 
 ### TODO: Check constraint violation? Seems that indeed 1e-3 osqp_atol/osqp_rtol leads to even lower constraint violations in general? Also osqp_atol/osqp_rtol do not seem to be really default to 1e-8 due to atol=rtol=None?
+### Moreover, seems that the min of pi entries can be as negative as -1600+, etc. which does not make any sense regardless of whether 1e-3 or 1e-8 osqp tolerances? Also double check if sum up to one violations make sense in general or not.
 ### Maybe something is still missing in the osqp_atol and osqp_rtol logic? Double check. Mainly check and compare the following.
+### Also don't forget about solve and solve_kwargs doc improvement: https://github.com/radar-research-lab/MFGLib/pull/55#issuecomment-3018458683
 """
 # alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) # this corresponds to 1e-8 osqp_atol and osqp_rtol? but eventual constraint violation seems to be even more based on the checking below?
 # alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)
