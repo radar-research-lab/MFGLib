@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import optuna
 
-from mfglib.env import Environment
 from mfglib.alg import OccupationMeasureInclusion
+from mfglib.env import Environment
 from mfglib.tuning import GeometricMean
 
 # By default, optuna displays logs. This silences them.
