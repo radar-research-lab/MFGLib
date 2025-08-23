@@ -147,20 +147,10 @@ class OccupationMeasureInclusion(Iterative[State]):
         else:
             osqp_rtol = self.osqp_rtol
 
-        # print(f"DEBUG: {osqp_rtol=}, {osqp_atol=}, {atol=}, {rtol=}, {self.osqp_warmstart=}")
-
-        # print(f"DEBUG: {d.abs().sum().item()=}")
-
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
-
-        # print(f"DEBUG: {d.min()=}, {d.sum(dim=[1,2])=}")
-
         pi = extract_policy_from_mean_field(state.env, d.clone().detach(), tolerance=(osqp_atol + osqp_rtol)/2 * 10)
-        # pi = extract_policy_from_mean_field(state.env, d.clone().detach())
-
-        # print(f"DEBUG: {pi.min()=}, {pi.sum(dim=2)=}")
 
         if self.osqp_warmstart:
             return State(env=state.env, pi=pi, d=d, x0=x0, y0=y0)
