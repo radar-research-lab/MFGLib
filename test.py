@@ -9,31 +9,50 @@ from mfglib.tuning import GeometricMean
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 env = Environment.rock_paper_scissors()
+# env = Environment.beach_bar() # this example 
 
-### Initialize algorithm arbitrarily
+######### Initialize algorithm arbitrarily
 
-### this corresponds to 1e-8 osqp_atol and osqp_rtol? but eventual constraint violation seems to be even more based on the checking below?
-### turns out to be mainly due to something like -1e-11, -1e-11, 2e-11 and then add up to 2e-14, and hence getting some -1500+ stuff entries. 
+###### this corresponds to 1e-8 osqp_atol and osqp_rtol? 
+### not really, this defaults to atol and rtol and they default to 1e-3 
+### --> no, more precisely, it uses 1e-8 osqp_atol/osqp_rtol in alg_orig solve, and then 1e-3 in tune, and finally got back to 1e-8 in alg_tuned solve
+### the tuned alpha seems to be the same as the "alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)" one below indeed
+### but the below one converges much faster due to 1e-3 osqp_atol/osqp_rtol vs. 1e-8 but that is something we should fix with the close to zero overwrite to zero change (see the next comment block)
+### --> though actually turns out even after the constraint violation is fully fixed, the 1e-8 osqp tol is still working a lot worse than 1e-3 which needs to be checked
+### --> but just for RPS; for beach_bar it's indeed better than 1e-3 osqp tol?
+### but also need to fix the inconsistent osqp_atol/osqp_rtol behavior in tune vs. non-tune mode here?
+### --> oh, actually this is expected --> as we use atol=None, rtol=None in .solve, but then tune didn't pass this as solve_kwargs 
+### --> this also again indicates that we need to improve solve_kwargs and solve doc in general?
+### btw seems that after getting it consistent, the alpha picked changed from ~0.09 to ~0.03, and performance becomes slightly better?
+
+###### but (if it's indeed 1e-8 osqp_atol/osqp_rtol; but now we know it's not really) eventual constraint violation seems to be even more based on the checking below?
+### forget about constraint violation more or less compared to below
+### but the big constraint violation especially of nonnegativity constraints in general turns out to be mainly due to something like -1e-11, -1e-11, 2e-11 and then add up to 2e-14, and hence getting some -1500+ stuff entries. 
 ### but weirdly/luckily the exploitability looks small/not wild/big indeed for such invalid pi
 ### d is indeed okay; just need to set some arg to overwrite to 0 if d entries abs < thresh
-### not really, this defaults to atol and rtol and they default to 1e-3.
-# alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) 
+### this fix is done, and constraint violation of both sum to one and nonnegativity gets largely improved (now generally 1e-7/1e-8 sum to one violation and all positive/nonnegative)
 
+alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) 
+
+### this replicates the changed behavior in the PR of override_54 that triggered this entire investigation
 # alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)
 
 ### indeed checked that this is different from the first version above, namely without specifying osqp_atol and osqp_rtol? --> explained above
 ### also checked that warmstart True vs. False here does not change the plot in the eyeball checking sense, but change the pi a lot (False: -1500+ entries; True: -200+ entries; but both wrong/need fix; see above for the fix)
-alg_orig = OccupationMeasureInclusion(
-    alpha=0.09, osqp_warmstart=False, osqp_atol=1e-8, osqp_rtol=1e-8
-)  
+# alg_orig = OccupationMeasureInclusion(
+#     alpha=0.09, osqp_warmstart=False, osqp_atol=1e-8, osqp_rtol=1e-8
+# )  
 
-# note that actually atol=None, rtol=None corresponds to atol=rtol=0 based on _trigger_early_stopping
-# so the first line below would indeed terminate earlier
+### note that actually atol=None, rtol=None corresponds to atol=rtol=0 based on _trigger_early_stopping
+### so the first line below would indeed terminate earlier
 # _, expls_orig, _ = alg_orig.solve(env, atol=1e-3, rtol=1e-3, verbose=True)
 pis_orig, expls_orig, rts_orig = alg_orig.solve(env, atol=None, rtol=None, verbose=True)
 
-# tune() returns an optuna.Study object
-study = alg_orig.tune(metric=GeometricMean(shift=0.5), envs=[env], n_trials=80)
+### tune() returns an optuna.Study object
+# study = alg_orig.tune(metric=GeometricMean(shift=0.5), envs=[env], n_trials=80)
+
+### need this to get consistent behavior as .solve (for atol/rtol and hence osqp_atol/osqp_rtol)
+study = alg_orig.tune(metric=GeometricMean(shift=0.5), envs=[env], n_trials=80, solve_kwargs={"atol":None, "rtol": None}) 
 
 # which we can use to initialize a new instance
 alg_tuned = alg_orig.from_study(study)
@@ -42,6 +61,10 @@ alg_tuned = alg_orig.from_study(study)
 pis_tuned, expls_tuned, rts_tuned = alg_tuned.solve(
     env, atol=None, rtol=None, verbose=True
 )
+
+# pis_tuned, expls_tuned, rts_tuned = alg_tuned.solve(
+#     env, atol=1e-8, rtol=1e-8, verbose=True
+# )
 
 
 plt.xlabel("Iteration")
@@ -59,17 +82,23 @@ print(expls_orig[0], expls_tuned[0])
 print()
 
 ### sanity check constraint violation
+import numpy as np
+
 print("### pis orig sum to one violation")
 print([(pis_orig_i.sum(axis=-1) - 1).abs().max().item() for pis_orig_i in pis_orig])
+print(np.max([(pis_orig_i.sum(axis=-1) - 1).abs().max().item() for pis_orig_i in pis_orig]))
 print()
 print("### pis orig nonnegativity violation")
 print([pis_orig_i.min().item() for pis_orig_i in pis_orig])
+print(np.min([pis_orig_i.min().item() for pis_orig_i in pis_orig]))
 print()
 print("### pis tuned sum to one violation")
 print([(pis_tuned_i.sum(axis=-1) - 1).abs().max().item() for pis_tuned_i in pis_tuned])
+print(np.max([(pis_tuned_i.sum(axis=-1) - 1).abs().max().item() for pis_tuned_i in pis_tuned]))
 print()
 print("### pis tuned nonnegativity violation")
 print([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned])
+print(np.min([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned]))
 
 
 ### [DONE] TODO: Check why tune not showing the optuna process printouts?
