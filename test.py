@@ -8,8 +8,17 @@ from mfglib.tuning import GeometricMean
 # By default, optuna displays logs. This silences them.
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-env = Environment.rock_paper_scissors()
-# env = Environment.beach_bar() # this example 
+# env = Environment.rock_paper_scissors()
+env = Environment.beach_bar()
+# env = Environment.equilibrium_price()
+# env = Environment.linear_quadratic()
+# env = Environment.random_linear()
+# env = Environment.susceptible_infected()
+# env = Environment.crowd_motion()
+# env = Environment.left_right()
+# env = Environment.conservative_treasure_hunting()
+# env = Environment.building_evacuation()
+
 
 ######### Initialize algorithm arbitrarily
 
@@ -19,11 +28,12 @@ env = Environment.rock_paper_scissors()
 ### the tuned alpha seems to be the same as the "alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)" one below indeed
 ### but the below one converges much faster due to 1e-3 osqp_atol/osqp_rtol vs. 1e-8 but that is something we should fix with the close to zero overwrite to zero change (see the next comment block)
 ### --> though actually turns out even after the constraint violation is fully fixed, the 1e-8 osqp tol is still working a lot worse than 1e-3 which needs to be checked
-### --> but just for RPS; for beach_bar it's indeed better than 1e-3 osqp tol?
+### --> but just for RPS; for beach_bar it's indeed better than 1e-3 osqp tol? 
+### --> and checked that it's even d.abs().sum() indeed change a lot between osqp tol 1e-8 vs 1e-3, so maybe just get lucky?
 ### but also need to fix the inconsistent osqp_atol/osqp_rtol behavior in tune vs. non-tune mode here?
 ### --> oh, actually this is expected --> as we use atol=None, rtol=None in .solve, but then tune didn't pass this as solve_kwargs 
 ### --> this also again indicates that we need to improve solve_kwargs and solve doc in general?
-### btw seems that after getting it consistent, the alpha picked changed from ~0.09 to ~0.03, and performance becomes slightly better?
+### btw seems that after getting it consistent, the alpha picked changed from ~0.09 to ~0.03, and performance becomes slightly better? --> better or not? ignore this, not really important
 
 ###### but (if it's indeed 1e-8 osqp_atol/osqp_rtol; but now we know it's not really) eventual constraint violation seems to be even more based on the checking below?
 ### forget about constraint violation more or less compared to below
@@ -34,7 +44,7 @@ env = Environment.rock_paper_scissors()
 
 alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) 
 
-### this replicates the changed behavior in the PR of override_54 that triggered this entire investigation
+### this replicates the changed behavior (converges better than 1e-8 basically, but turns out after checking more examples just coincidence for RPS) in the PR of override_54 that triggered this entire investigation
 # alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)
 
 ### indeed checked that this is different from the first version above, namely without specifying osqp_atol and osqp_rtol? --> explained above
@@ -76,28 +86,28 @@ plt.grid()
 plt.legend()
 plt.show()
 
-### sanity check it's not normalized
-print("### sanity check expls not normalized")
-print(expls_orig[0], expls_tuned[0])
-print()
+# ### sanity check it's not normalized
+# print("### sanity check expls not normalized")
+# print(expls_orig[0], expls_tuned[0])
+# print()
 
 ### sanity check constraint violation
 import numpy as np
 
 print("### pis orig sum to one violation")
-print([(pis_orig_i.sum(axis=-1) - 1).abs().max().item() for pis_orig_i in pis_orig])
+# print([(pis_orig_i.sum(axis=-1) - 1).abs().max().item() for pis_orig_i in pis_orig])
 print(np.max([(pis_orig_i.sum(axis=-1) - 1).abs().max().item() for pis_orig_i in pis_orig]))
 print()
 print("### pis orig nonnegativity violation")
-print([pis_orig_i.min().item() for pis_orig_i in pis_orig])
+# print([pis_orig_i.min().item() for pis_orig_i in pis_orig])
 print(np.min([pis_orig_i.min().item() for pis_orig_i in pis_orig]))
 print()
 print("### pis tuned sum to one violation")
-print([(pis_tuned_i.sum(axis=-1) - 1).abs().max().item() for pis_tuned_i in pis_tuned])
+# print([(pis_tuned_i.sum(axis=-1) - 1).abs().max().item() for pis_tuned_i in pis_tuned])
 print(np.max([(pis_tuned_i.sum(axis=-1) - 1).abs().max().item() for pis_tuned_i in pis_tuned]))
 print()
 print("### pis tuned nonnegativity violation")
-print([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned])
+# print([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned])
 print(np.min([pis_tuned_i.min().item() for pis_tuned_i in pis_tuned]))
 
 

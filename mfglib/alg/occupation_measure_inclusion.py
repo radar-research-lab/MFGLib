@@ -147,7 +147,9 @@ class OccupationMeasureInclusion(Iterative[State]):
         else:
             osqp_rtol = self.osqp_rtol
 
-        print(f"DEBUG: {osqp_rtol=}, {osqp_atol=}, {atol=}, {rtol=}, {self.osqp_warmstart=}")
+        # print(f"DEBUG: {osqp_rtol=}, {osqp_atol=}, {atol=}, {rtol=}, {self.osqp_warmstart=}")
+
+        # print(f"DEBUG: {d.abs().sum().item()=}")
 
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
