@@ -77,7 +77,9 @@ def project_onto_simplex(
 
 
 def extract_policy_from_mean_field(
-    env_instance: Environment, L: torch.Tensor, tolerance: float | None = None,
+    env_instance: Environment,
+    L: torch.Tensor,
+    tolerance: float | None = None,
 ) -> torch.Tensor:
     """Compute the policy given mean-field.
 

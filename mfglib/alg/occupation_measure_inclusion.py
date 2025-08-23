@@ -150,7 +150,9 @@ class OccupationMeasureInclusion(Iterative[State]):
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
-        pi = extract_policy_from_mean_field(state.env, d.clone().detach(), tolerance=(osqp_atol + osqp_rtol)/2 * 10)
+        pi = extract_policy_from_mean_field(
+            state.env, d.clone().detach(), tolerance=(osqp_atol + osqp_rtol) / 2 * 10
+        )
 
         if self.osqp_warmstart:
             return State(env=state.env, pi=pi, d=d, x0=x0, y0=y0)
