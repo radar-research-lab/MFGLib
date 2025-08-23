@@ -9,12 +9,23 @@ from mfglib.tuning import GeometricMean
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 env = Environment.rock_paper_scissors()
-# Initialize algorithm arbitrarily
-# alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) # this corresponds to 1e-8 osqp_atol and osqp_rtol? but eventual constraint violation seems to be even more based on the checking below?
+
+### Initialize algorithm arbitrarily
+
+### this corresponds to 1e-8 osqp_atol and osqp_rtol? but eventual constraint violation seems to be even more based on the checking below?
+### turns out to be mainly due to something like -1e-11, -1e-11, 2e-11 and then add up to 2e-14, and hence getting some -1500+ stuff entries. 
+### but weirdly/luckily the exploitability looks small/not wild/big indeed for such invalid pi
+### d is indeed okay; just need to set some arg to overwrite to 0 if d entries abs < thresh
+### not really, this defaults to atol and rtol and they default to 1e-3.
+# alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False) 
+
 # alg_orig = OccupationMeasureInclusion(alpha=0.09, osqp_warmstart=False, osqp_atol=1e-3, osqp_rtol=1e-3)
+
+### indeed checked that this is different from the first version above, namely without specifying osqp_atol and osqp_rtol? --> explained above
+### also checked that warmstart True vs. False here does not change the plot in the eyeball checking sense, but change the pi a lot (False: -1500+ entries; True: -200+ entries; but both wrong/need fix; see above for the fix)
 alg_orig = OccupationMeasureInclusion(
     alpha=0.09, osqp_warmstart=False, osqp_atol=1e-8, osqp_rtol=1e-8
-)  # indeed checked that this is different from the first version above, namely without specifying osqp_atol and osqp_rtol?
+)  
 
 # note that actually atol=None, rtol=None corresponds to atol=rtol=0 based on _trigger_early_stopping
 # so the first line below would indeed terminate earlier
