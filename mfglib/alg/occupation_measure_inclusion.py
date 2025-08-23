@@ -23,8 +23,8 @@ from mfglib.env import Environment
 from mfglib.mean_field import mean_field
 
 
-# TODO: Change to support warm start and update vectors to be more efficient
-#  https://osqp.org/docs/interfaces/python.html#python-interface
+# TODO: consider update vectors to be more efficient
+# https://osqp.org/docs/interfaces/python.html#python-interface
 def osqp_proj(
     d: torch.Tensor,
     b: torch.Tensor,
