@@ -14,9 +14,9 @@ The following algorithms come pre-implemented with MFGLib.
      - :cite:t:`perolat2021`
    * - Prior Descent
      - :cite:t:`cui2021`
-   * - Mean-Field Measure Occupation Measure Optimization
+   * - Mean-Field Occupation Measure Optimization
      - :cite:t:`guo2022`
-   * - Occupation Measure Inclusion
+   * - Mean-Field Occupation Measure Inclusion
      - :cite:t:`hu2024`
 
 Further algorithm details are provided below. To learn how to implement your own algorithm, see

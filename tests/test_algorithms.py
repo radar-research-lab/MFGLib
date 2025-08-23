@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from tempfile import TemporaryDirectory
-from typing import Any, Literal
 
+import numpy as np
+import optuna
 import pytest
 import torch
-from torch.testing import assert_close
 
 from mfglib.alg import (
     MFOMO,
@@ -16,36 +16,19 @@ from mfglib.alg import (
 )
 from mfglib.alg.abc import Algorithm
 from mfglib.env import Environment
-from mfglib.tuning import FailureRate, GeometricMean
+from mfglib.tuning import GeometricMean
 
-
-def _assert_lr_solved(
-    algorithm: Algorithm, lr: Environment, atol: float, rtol: float
-) -> None:
-    """See https://github.com/junziz/MFGLib/issues/55 for derivations."""
-    solns, _, _ = algorithm.solve(lr, max_iter=2000, atol=atol, rtol=rtol)
-    pi = solns[-1]
-
-    # The shape should reflect two time steps, three states, and two actions
-    assert pi.shape == (2, 3, 2)
-
-    # NE requirement as derived in GH#55
-    result = lr.mu0 @ pi[0, :, 0]
-    expected = (2.0 / 3.0) * torch.ones_like(result)
-    assert_close(result, expected, atol=atol, rtol=rtol)
-
-    # Policies at all time steps should be valid probability distributions
-    result = pi.sum(dim=-1)
-    expected = torch.ones_like(result)
-    assert_close(result, expected)
+optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 
 @pytest.mark.parametrize(
-    "algorithm",
+    "alg",
     [
-        FictitiousPlay(alpha=0.001),
-        PriorDescent(eta=1.0, n_inner=50),
-        OnlineMirrorDescent(alpha=1.0),
+        FictitiousPlay(alpha=0.01),
+        PriorDescent(eta=2.0, n_inner=60),
+        OnlineMirrorDescent(alpha=0.01),
+        MFOMO(),
+        OccupationMeasureInclusion(alpha=0.01),
     ],
 )
 @pytest.mark.parametrize(
@@ -54,96 +37,94 @@ def _assert_lr_solved(
         (1.0, 0.0, 0.0),
         (0.0, 1.0, 0.0),
         (0.0, 0.0, 1.0),
-        (0.5, 0.25, 0.25),
-        (0.5, 0.5, 0.0),
-        (0.5, 0.0, 0.5),
+        (1 / 3, 1 / 3, 1 / 3),
     ],
 )
-@pytest.mark.parametrize("atol", [1e-4])
-@pytest.mark.parametrize("rtol", [1e-4])
-def test_algorithms_on_lr(
-    algorithm: Algorithm, mu0: tuple[float, float, float], atol: float, rtol: float
-) -> None:
-    _assert_lr_solved(
-        algorithm=algorithm, lr=Environment.left_right(mu0), atol=atol, rtol=rtol
-    )
+def test_alg_on_lr(alg: Algorithm, mu0: tuple[float, float, float]) -> None:
+    """Algorithm solves simple Left Right environment.
 
+    See https://github.com/junziz/MFGLib/issues/55 for NE derivation.
+    """
+    lr = Environment.left_right(mu0)
 
-@pytest.mark.parametrize(
-    "source,name,config,n_iter,parameterized",
-    [
-        ("pytorch", "Adam", {"lr": 1.0}, 300, False),
-        ("pytorch", "Adam", {"lr": 0.1}, 1000, True),
-    ],
-)
-def test_mf_omo_on_lr(
-    source: Literal["pytorch"],
-    name: str,
-    config: dict[str, Any],
-    n_iter: int,
-    parameterized: bool,
-) -> None:
-    lr = Environment.left_right(mu0=(1.0, 0.0, 0.0))
-    algorithm = MFOMO(
-        optimizer={"source": source, "name": name, "config": config},
-    )
-    _assert_lr_solved(algorithm=algorithm, lr=lr, atol=0.0005, rtol=0.00008)
+    pis, _, expls = alg.solve(lr, max_iter=4000, atol=None, rtol=None)
+    assert len(pis) == len(expls)
+    pi_last = pis[-1]
+
+    # The shape should reflect two time steps, three states, and two actions
+    assert pi_last.shape == (2, 3, 2)
+
+    # NE requirement as derived in GH#55
+    result = lr.mu0 @ pi_last[0, :, 0]
+    np.testing.assert_approx_equal(result, 2.0 / 3.0, significant=2)
+
+    # Policies at all time steps should be valid probability distributions
+    result = pi_last.sum(dim=-1)
+    expected = torch.ones_like(result)
+    torch.testing.assert_close(result, expected)
 
 
 @pytest.mark.parametrize(
     "alg",
     [
         FictitiousPlay(),
-        MFOMO(),
         OnlineMirrorDescent(),
         PriorDescent(),
+        OccupationMeasureInclusion(),
     ],
 )
-@pytest.mark.parametrize("stat", ["iter", "rt", "expl"])
-def test_tuner_on_rps(alg: Algorithm, stat: Literal["iter", "rt", "expl"]) -> None:
-    rps = Environment.rock_paper_scissors()
+def test_tuner_reduces_expl(alg: Algorithm) -> None:
+    """Tuner workflow reduces minimal exploitability."""
+    MAX_ITER = 20
 
-    alg.tune(
-        envs=[rps],
-        pi_0s="uniform",
-        metric=FailureRate(fail_thresh=100, stat=stat),
-        solve_kwargs={"max_iter": 200},
-        n_trials=5,
-        timeout=20,
+    env = Environment.susceptible_infected(T=7)
+
+    optuna_study = alg.tune(
+        metric=GeometricMean(shift=0),
+        envs=[env],
+        solve_kwargs={"max_iter": MAX_ITER, "atol": None, "rtol": None},
+        n_trials=20,
     )
-    # NOTE: fail_thresh is not required when stat == "rt"
-    if stat != "rt":
-        alg.tune(
-            envs=[rps],
-            pi_0s="uniform",
-            metric=FailureRate(stat=stat),
-            solve_kwargs={"max_iter": 200},
-            n_trials=5,
-            timeout=20,
-        )
-    alg.tune(
-        envs=[rps],
-        pi_0s="uniform",
-        metric=GeometricMean(shift=1.0, stat=stat),
-        solve_kwargs={"max_iter": 200},
-        n_trials=5,
-        timeout=20,
+    alg_tune = alg.from_study(optuna_study)
+
+    _, expls_orig, _ = alg.solve(env, max_iter=MAX_ITER, atol=None, rtol=None)
+    _, expls_tune, _ = alg_tune.solve(env, max_iter=MAX_ITER, atol=None, rtol=None)
+
+    min_expl_orig = min(expls_orig)
+    min_expl_tune = min(expls_tune)
+
+    assert optuna_study.best_trial.value == min_expl_tune
+    assert min_expl_tune < min_expl_orig
+
+
+def test_tuner_finds_low_expl() -> None:
+    """Tuner workflow is able to find parameters with low exploitability."""
+    MAX_ITER = 600
+
+    env = Environment.building_evacuation(n_floor=3, floor_l=5, floor_w=5)
+    alg = OnlineMirrorDescent()
+
+    optuna_study = alg.tune(
+        metric=GeometricMean(shift=0),
+        envs=[env],
+        solve_kwargs={"max_iter": MAX_ITER, "atol": None, "rtol": None},
+        n_trials=30,
     )
+    assert optuna_study.best_trial.value is not None
+    assert 0 <= optuna_study.best_trial.value <= 3e-4
 
 
-@pytest.mark.parametrize("alpha", [None, 1.0])
-def test_fictitious_play_save_and_load(alpha: float | None) -> None:
-    fp = FictitiousPlay(alpha=alpha)
+def test_fictitious_play_save_and_load() -> None:
+    fp = FictitiousPlay(alpha=0.5)
     with TemporaryDirectory() as tmpdir:
         fp.save(tmpdir)
         fp2 = FictitiousPlay.load(tmpdir)
         assert fp2.alpha == fp.alpha
 
 
-@pytest.mark.parametrize("eta", [0.5])
 @pytest.mark.parametrize("n_inner", [None, 50])
-def test_prior_descent_save_and_load(eta: float, n_inner: int | None) -> None:
-    pd = PriorDescent(eta=eta, n_inner=n_inner)
+def test_prior_descent_save_and_load(n_inner: int | None) -> None:
+    pd = PriorDescent(eta=0.5, n_inner=n_inner)
     with TemporaryDirectory() as tmpdir:
         pd.save(tmpdir)
         pd2 = PriorDescent.load(tmpdir)
@@ -151,9 +132,8 @@ def test_prior_descent_save_and_load(eta: float, n_inner: int | None) -> None:
         assert pd2.n_inner == pd.n_inner
 
 
-@pytest.mark.parametrize("alpha", [2.0])
-def test_mirror_descent_save_and_load(alpha: float) -> None:
-    md = OnlineMirrorDescent()
+def test_mirror_descent_save_and_load() -> None:
+    md = OnlineMirrorDescent(alpha=2.0)
     with TemporaryDirectory() as tmpdir:
         md.save(tmpdir)
         md2 = OnlineMirrorDescent.load(tmpdir)

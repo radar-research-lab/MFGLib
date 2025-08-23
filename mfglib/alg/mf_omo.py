@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any, Literal
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import optuna
 import torch
@@ -408,7 +414,7 @@ class MFOMO(Algorithm):
         expls = [exploitability_score(env, pi)]
         rts = [0.0]
 
-        logger = Logger(verbose, print_every)
+        logger = Logger(verbose)
         logger.display_info(
             env=env,
             cls=f"{self.__class__.__name__}",
@@ -498,26 +504,40 @@ class MFOMO(Algorithm):
 
             pis.append(pi.clone().detach())
             expls.append(exploitability_score(env, pi))
+            rts.append(time.time() - t_0)
             if expls[i] < expls[argmin]:
                 argmin = i
-            rts.append(time.time() - t_0)
-
-            logger.insert_row(
-                i=i,
-                expl=expls[i],
-                ratio=expls[i] / expls[0],
-                argmin=argmin,
-                elapsed=rts[i],
-            )
+            if i % print_every == 0:
+                logger.insert_row(
+                    i=i,
+                    expl=expls[i],
+                    ratio=expls[i] / expls[0],
+                    argmin=argmin,
+                    elapsed=rts[i],
+                )
             if _trigger_early_stopping(expls[0], expls[i], atol, rtol):
+                if i % print_every != 0:
+                    logger.insert_row(
+                        i=i,
+                        expl=expls[i],
+                        ratio=expls[i] / expls[0],
+                        argmin=argmin,
+                        elapsed=rts[i],
+                    )
                 logger.flush_stopped()
                 return pis, expls, rts
 
+        logger.insert_row(
+            i=max_iter,
+            expl=expls[max_iter],
+            ratio=expls[max_iter] / expls[0],
+            argmin=argmin,
+            elapsed=rts[max_iter],
+        )
         logger.flush_exhausted()
         return pis, expls, rts
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> MFOMO:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
         rb_freq_num = trial.suggest_int("rb_freq_num", 1, 201, step=10)
         rb_freq = None if rb_freq_bool else rb_freq_num
@@ -527,8 +547,7 @@ class MFOMO(Algorithm):
                 "lr": trial.suggest_float("lr", 1e-3, 1e3, log=True),
             },
         }
-
-        return MFOMO(
+        return type(self)(
             loss=trial.suggest_categorical(  # type: ignore[arg-type]
                 "loss", ["l1", "l2", "l1_l2"]
             ),
@@ -542,3 +561,33 @@ class MFOMO(Algorithm):
             parameterize=trial.suggest_categorical("parameterize", [False, True]),
             hat_init=trial.suggest_categorical("hat_init", [False, True]),
         )
+
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        expected_params = {
+            "loss",
+            "c1",
+            "c2",
+            "rb_freq_bool",
+            "rb_freq_num",
+            "m1",
+            "m2",
+            "m3",
+            "parameterize",
+            "name",
+            "lr",
+            "hat_init",
+        }
+        err_msg = f"{study.best_params.keys()=} != {expected_params}."
+        assert study.best_params.keys() == expected_params, err_msg
+
+        best_params = study.best_params
+        rb_freq_bool = best_params.pop("rb_freq_bool")
+        rb_freq_num = best_params.pop("rb_freq_num")
+        rb_freq = None if rb_freq_bool else rb_freq_num
+
+        optimizer = {
+            "name": best_params.pop("name"),
+            "config": {"lr": best_params.pop("lr")},
+        }
+
+        return type(self)(rb_freq=rb_freq, optimizer=optimizer, **best_params)

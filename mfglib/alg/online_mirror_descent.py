@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import optuna
 import torch
@@ -43,7 +49,9 @@ class OnlineMirrorDescent(Iterative[State]):
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(env=env, pi=pi_0, y=torch.zeros(env.T + 1, *env.S, *env.A))
 
-    def step_next_state(self, state: State) -> State:
+    def step_next_state(
+        self, state: State, atol: float | None, rtol: float | None
+    ) -> State:
         L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi)
         y = state.y + self.alpha * Q
@@ -57,8 +65,5 @@ class OnlineMirrorDescent(Iterative[State]):
     def parameters(self) -> dict[str, float | str | None]:
         return {"alpha": self.alpha}
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> OnlineMirrorDescent:
-        return OnlineMirrorDescent(
-            alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True),
-        )
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
+        return type(self)(alpha=trial.suggest_float("alpha", 1e-5, 1e5, log=True))

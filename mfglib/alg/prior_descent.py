@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 import optuna
 import torch
@@ -57,7 +63,9 @@ class PriorDescent(Iterative[State]):
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
         return State(i=0, env=env, pi=pi_0, q=pi_0.clone())
 
-    def step_next_state(self, state: State) -> State:
+    def step_next_state(
+        self, state: State, atol: float | None, rtol: float | None
+    ) -> State:
         L = mean_field(state.env, state.pi)
         Q = QFn(state.env, L, verify_integrity=False).optimal() / self.eta
 
@@ -85,12 +93,22 @@ class PriorDescent(Iterative[State]):
     def parameters(self) -> dict[str, float | str | None]:
         return {"eta": self.eta, "n_inner": self.n_inner}
 
-    @classmethod
-    def _init_tuner_instance(cls, trial: optuna.Trial) -> PriorDescent:
+    def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         n_inner_bool = trial.suggest_categorical("n_inner_bool", [False, True])
         n_inner_num = trial.suggest_int("n_inner_num", 1, 101, step=5)
         n_inner = None if n_inner_bool else n_inner_num
-        return PriorDescent(
+        return type(self)(
             eta=trial.suggest_float("eta", 1e-5, 1e5, log=True),
             n_inner=n_inner,
         )
+
+    def from_study(self: Self, study: optuna.Study) -> Self:
+        expected_params = {"n_inner_bool", "n_inner_num", "eta"}
+        err_msg = f"{study.best_params.keys()=} != {expected_params}."
+        assert study.best_params.keys() == expected_params, err_msg
+        if study.best_params["n_inner_bool"]:
+
+            n_inner_bool = study.best_params["n_inner_num"]
+        else:
+            n_inner_bool = None
+        return type(self)(eta=study.best_params["eta"], n_inner=n_inner_bool)

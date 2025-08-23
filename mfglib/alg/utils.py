@@ -77,7 +77,9 @@ def project_onto_simplex(
 
 
 def extract_policy_from_mean_field(
-    env_instance: Environment, L: torch.Tensor
+    env_instance: Environment,
+    L: torch.Tensor,
+    tolerance: float | None = None,
 ) -> torch.Tensor:
     """Compute the policy given mean-field.
 
@@ -98,7 +100,9 @@ def extract_policy_from_mean_field(
     ats_to_tsa = tuple(range(l_a, l_a + 1 + l_s)) + tuple(range(l_a))
 
     # Corresponding policy
-
+    # overwrite below tolerance entries to exactly 0 to avoid normalization blowup
+    if tolerance is not None:
+        L[L.abs() <= tolerance] = 0
     L_sum_rptd = (
         L.flatten(start_dim=1 + l_s).sum(-1).repeat(A + ones_ts).permute(ats_to_tsa)
     )
