@@ -25,7 +25,14 @@ the section on :ref:`user_defined_algorithms`.
 API Reference
 -------------
 
-All the pre-implemented algorithms are importable from ``mfglib.alg``.
+All the pre-implemented algorithms are importable from ``mfglib.alg``. Each algorithm is equipped with
+a ``.solve()`` method that serves to find a Nash equilibrium of a supplied environment instance.
+
+.. automethod:: mfglib.alg.abc::Algorithm.solve
+
+In addition to the environment instance ``env``, you can provide an initial policy ``pi_0`` and various
+algorithm parameters such as ``max_iter`` and tolerance parameters ``atol`` and ``rtol``. MFGLib provides
+the following algorithms:
 
 .. autoclass:: mfglib.alg::FictitiousPlay
 

@@ -27,6 +27,11 @@ and identifies the optimal choice.
 
 .. automethod:: mfglib.alg.abc::Algorithm.tune
 
+.. note::
+
+    The keyword arguments provided in ``solve_kwargs`` will be forwarded to the call to ``.solve()``
+    during tuning. You can use ``solve_kwargs`` to set parameters like ``atol`` or ``rtol``.
+
 Notice that ``tune()`` returns an ``optuna.Study`` object. This object contains the results of the
 hyperparameter optimization process. Of course, you can extract the results manually, but for convenience
 we provide a ``from_study()`` instance method to initialize a new algorithm instance.
