@@ -79,7 +79,7 @@ directory = "changelog.d"
 filename = "CHANGELOG.md"
 start_string = "<!-- towncrier release notes start -->\n"
 underlines = ["", "", ""]
-title_format = "## [{version}](https://github.com/radar-research-lab/MFGLib/tree/{version}) - {project_date}"
+title_format = "## [v{version}](https://github.com/radar-research-lab/MFGLib/tree/v{version}) - {project_date}"
 issue_format = "[#{issue}](https://github.com/radar-research-lab/MFGLib/issues/{issue})"
 
 [[tool.towncrier.type]]
