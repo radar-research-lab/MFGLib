@@ -24,3 +24,11 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 ### Fixed
 
 - Fix bugs in Beach Bar environment ([#40](https://github.com/radar-research-lab/MFGLib/issues/40))
+
+## [v0.1.1](https://github.com/radar-research-lab/MFGLib/tree/v0.1.1) - 2023-04-13
+
+- Package polishing, including adding badges to the `README` and more prominent links to the documentation site.
+
+## [v0.1.0](https://github.com/radar-research-lab/MFGLib/tree/v0.1.0) - 2023-04-13
+
+- First public release of MFGLib.

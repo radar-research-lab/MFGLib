@@ -32,7 +32,7 @@ mypy = "~=1.0"
 ruff = "~=0.9"
 pytest = "~=8.0"
 coverage = "~=7.0"
-towncrier = "~=24.0"
+towncrier = "~=25.0"
 
 [tool.poetry.group.doc]
 optional = true
@@ -83,34 +83,22 @@ title_format = "## [v{version}](https://github.com/radar-research-lab/MFGLib/tre
 issue_format = "[#{issue}](https://github.com/radar-research-lab/MFGLib/issues/{issue})"
 
 [[tool.towncrier.type]]
-directory = "security"
 name = "Security"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "removed"
 name = "Removed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "deprecated"
 name = "Deprecated"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "added"
 name = "Added"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "changed"
 name = "Changed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "fixed"
 name = "Fixed"
-showcontent = true
 
 [build-system]
 requires = ["poetry-core"]
