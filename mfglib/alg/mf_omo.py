@@ -413,6 +413,8 @@ class MFOMO(Algorithm):
         argmin = 0
         expls = [exploitability_score(env, pi)]
         rts = [0.0]
+        # TODO: remove the following line
+        obj_vals = torch.empty(max_iter + 1)
 
         logger = Logger(verbose)
         logger.display_info(
@@ -477,6 +479,8 @@ class MFOMO(Algorithm):
                 self.c3,
                 self.parameterize,
             )
+            # TODO: remove the following line
+            obj_vals[i - 1] = obj.item()
 
             # Compute the gradients, update the params, and aply the constraints
             optimizer_instance.zero_grad()
@@ -535,7 +539,24 @@ class MFOMO(Algorithm):
             elapsed=rts[max_iter],
         )
         logger.flush_exhausted()
-        return pis, expls, rts
+
+        # TODO: uncomment the following line
+        # return pis, expls, rts
+
+        obj = mf_omo_obj(
+            env,
+            L_u_tensor,
+            z_v_tensor,
+            y_w_tensor,
+            self.loss,
+            c1,
+            c2,
+            self.c3,
+            self.parameterize,
+        )
+        obj_vals[max_iter] = obj.item()
+
+        return pis, expls, obj_vals
 
     def _init_tuner_instance(self: Self, trial: optuna.Trial) -> Self:
         rb_freq_bool = trial.suggest_categorical("rb_freq_bool", [False, True])
