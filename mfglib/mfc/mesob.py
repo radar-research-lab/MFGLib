@@ -5,7 +5,7 @@ from typing import Any, Callable, TypedDict
 import torch.nn
 
 from mfglib.env import Environment
-from mfglib.scoring import exploitability_score
+from mfglib.scoring import exploitability_score as expl_score
 
 
 class MESOB:
@@ -77,7 +77,9 @@ class MESOB:
             err[T] = term_1 + z[T] - c_T
             return err.square().sum()
 
-    def __init__(self, λ: tuple[float, float], ρ: tuple[float, float]) -> None:
+    def __init__(
+        self, λ: tuple[float, float], ρ: tuple[float, float] = (1.0, 1.0)
+    ) -> None:
         self.λ = λ
         self.ρ = ρ
 
@@ -130,7 +132,7 @@ class MESOB:
             pi = pi.nan_to_num(nan=1 / n_actions)
 
             pis[i] = pi.data.clone()
-            expls[i] = exploitability_score(env, pi)
+            expls[i] = expl_score(env, pi)
             obj_vals[i] = obj_val.data.clone()
 
             opt.zero_grad()
@@ -147,7 +149,7 @@ class MESOB:
         pi = pi.nan_to_num(nan=1 / n_actions)
 
         pis[max_iter] = pi.data.clone()
-        expls[max_iter] = exploitability_score(env, pi)
+        expls[max_iter] = expl_score(env, pi)
         obj_vals[max_iter] = obj_val.data.clone()
 
         return pis, expls, obj_vals
@@ -202,9 +204,7 @@ def project_l2_ball(v: torch.Tensor, *, r: float = 1.0) -> torch.Tensor:
 
 
 def project_Z_set(z: torch.Tensor, *, r: float) -> torch.Tensor:
-    """TODO -- is this supposed to be a real projection?"""
-    z_ravel = z.ravel()
-    z_clamp = z_ravel.clamp(min=0)
+    z_clamp = z.ravel().clamp(min=0)
     if z_clamp.sum() > r:
         z_clamp = project_simplex(z_clamp, r=r)
     return z_clamp.reshape(z.shape)
