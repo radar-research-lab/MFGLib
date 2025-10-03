@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
+from mfglib.utils import mean_field_from_policy
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -14,7 +16,6 @@ import torch
 from mfglib.alg.abc import Iterative
 from mfglib.alg.greedy_policy_given_mean_field import Greedy_Policy
 from mfglib.env import Environment
-from mfglib.mean_field import mean_field
 
 
 @dataclass
@@ -63,9 +64,9 @@ class FictitiousPlay(Iterative[State]):
     def step_next_state(
         self, state: State, atol: float | None, rtol: float | None
     ) -> State:
-        L = mean_field(state.env, state.pi)
+        L = mean_field_from_policy(state.pi, env=state.env)
         pi_br = Greedy_Policy(state.env, L)
-        L_br = mean_field(state.env, pi_br)
+        L_br = mean_field_from_policy(pi_br, env=state.env)
 
         pi = state.pi
         states_dim = len(state.env.S)
