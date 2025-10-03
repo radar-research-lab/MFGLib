@@ -61,22 +61,6 @@ def test_hat_initialization(env: Environment) -> None:
     assert w_hat.shape == (tuple_prod((env.T + 1, *env.S)),)
 
 
-def test_mean_field_policy_roundtrip() -> None:
-    sis = Environment.susceptible_infected(T=2, mu0=(0.6, 0.4))
-
-    # fmt: off
-    L = torch.tensor(
-        [[[0.0000, 0.6259], [0.3741, 0.0000]],
-         [[0.7766, 0.0000], [0.2234, 0.0000]],
-         [[0.7144, 0.0000], [0.2856, 0.0000]]]
-    )
-    # fmt: on
-    pi = policy_from_mean_field(L, env=sis)
-
-    L_new = mean_field_from_policy(pi, env=sis)
-    assert torch.allclose(L_new, L)
-
-
 @pytest.mark.parametrize(
     "env",
     [

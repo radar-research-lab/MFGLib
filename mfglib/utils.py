@@ -32,9 +32,9 @@ def mean_field_from_policy(pi: torch.Tensor, *, env: Environment) -> torch.Tenso
         Lₜ = L[t].reshape(*env.S, *env.A)
         Pₜ = (
             env.prob(t, Lₜ)
-            .flatten(end_dim=S_dim - 1)
-            .flatten(start_dim=1, end_dim=S_dim)
-            .flatten(start_dim=2)
+            .flatten(end_dim=S_dim - 1)  # flatten "to" states
+            .flatten(start_dim=1, end_dim=S_dim)  # flatten actions
+            .flatten(start_dim=2)  # flatten "from" states
         )
         L[t + 1] = torch.einsum("sa,SA,sSA->sa", pi[t + 1], L[t], Pₜ)
 
