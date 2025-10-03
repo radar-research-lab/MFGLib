@@ -3,8 +3,6 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
-from mfglib.utils import mean_field_from_policy
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -16,6 +14,7 @@ import torch
 from mfglib.alg.abc import Iterative
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
+from mfglib.utils import mean_field_from_policy
 
 
 @dataclass

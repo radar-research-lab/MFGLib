@@ -6,8 +6,6 @@ import time
 from pathlib import Path
 from typing import Any, Literal
 
-from mfglib.utils import policy_from_mean_field
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -33,6 +31,7 @@ from mfglib.alg.utils import (
 )
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score
+from mfglib.utils import policy_from_mean_field
 
 DEFAULT_OPTIMIZER = {
     "name": "Adam",

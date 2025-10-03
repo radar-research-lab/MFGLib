@@ -4,8 +4,6 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-from mfglib.utils import mean_field_from_policy, policy_from_mean_field
-
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -21,6 +19,7 @@ from scipy import sparse
 from mfglib.alg.abc import Iterative
 from mfglib.alg.mf_omo_params import mf_omo_params
 from mfglib.env import Environment
+from mfglib.utils import mean_field_from_policy, policy_from_mean_field
 
 
 # TODO: consider update vectors to be more efficient

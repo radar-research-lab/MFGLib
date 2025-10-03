@@ -10,7 +10,7 @@ from mfglib.alg.utils import (
     project_onto_simplex,
 )
 from mfglib.env import Environment
-from mfglib.utils import mean_field_from_policy, policy_from_mean_field
+from mfglib.utils import mean_field_from_policy
 
 
 def test_project_onto_simplex() -> None:

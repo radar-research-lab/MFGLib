@@ -32,9 +32,9 @@ def mean_field_from_policy(pi: torch.Tensor, *, env: Environment) -> torch.Tenso
         Lₜ = L[t].reshape(*env.S, *env.A)
         Pₜ = (
             env.prob(t, Lₜ)
-            .flatten(end_dim=S_dim - 1)  # flatten "to" states
+            .flatten(end_dim=S_dim - 1)  # flatten "dst" states
             .flatten(start_dim=1, end_dim=S_dim)  # flatten actions
-            .flatten(start_dim=2)  # flatten "from" states
+            .flatten(start_dim=2)  # flatten "src" states
         )
         L[t + 1] = torch.einsum("sa,SA,sSA->sa", pi[t + 1], L[t], Pₜ)
 
@@ -46,13 +46,15 @@ def policy_from_mean_field(
 ) -> torch.Tensor:
     """Compute the policy π = Π(L) corresponding to the mean field L.
 
-    Args:
+    Args
+    ----
         L: A tensor with dimensions (T+1, *S, *A) where each time slice represents
             a *joint* probability distribution over states and actions.
         env: An environment instance.
         tol: Optionally set `L[L.abs() <= tol] = 0` to avoid numerical blowup.
 
-    Returns:
+    Returns
+    -------
     A tensor with dimensions (T+1, *S, *A) where each time slice represents
         a *conditional* probability distribution over actions given state.
     """
