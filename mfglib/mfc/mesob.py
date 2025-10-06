@@ -152,7 +152,7 @@ class MESOB:
         expls[max_iter] = expl_score(env, pi)
         obj_vals[max_iter] = obj_val.data.clone()
 
-        return pis, expls, obj_vals
+        return pis, expls, obj_vals, d.detach(), y.detach(), z.detach()
 
 
 def project_simplex(v: torch.Tensor, r: float = 1.0, axis: int = -1) -> torch.Tensor:
