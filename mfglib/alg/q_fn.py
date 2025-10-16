@@ -119,3 +119,21 @@ class QFn:
             return self._transition_probabilities(t) @ (pi_q)
 
         return self._compute_q_values(future_rewards)
+
+
+def optimal_state_action_values(L: torch.Tensor, *, env: Environment) -> torch.Tensor:
+    """Compute optimal state action value Q-values."""
+    T = env.T
+    n_states = env.n_states
+    n_actions = env.n_actions
+
+    Q = torch.empty_like(L)
+    Q[T] = env.reward(T, L[T])
+    Q = Q.reshape(T + 1, n_states, n_actions)
+
+    for t in range(T - 1, -1, -1):
+        r_t = env.reward(t, L[t]).reshape(n_states, n_actions)
+        P_t = env.prob(t, L[t]).reshape(n_states, n_states, n_actions).movedim(0, 2)
+        Q[t] = r_t + P_t @ Q[t + 1].max(dim=-1)[0]
+
+    return Q.reshape([T + 1, *env.S, *env.A])
