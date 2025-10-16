@@ -434,7 +434,7 @@ class MFOMO(Algorithm):
         logger.insert_row(
             i=0,
             expl=expls[0],
-            ratio=expls[0] / expls[0],
+            ratio=torch.inf if expls[0] == 0 else expls[0] / expls[0],
             argmin=argmin,
             elapsed=rts[0],
         )
@@ -509,7 +509,7 @@ class MFOMO(Algorithm):
                 logger.insert_row(
                     i=i,
                     expl=expls[i],
-                    ratio=expls[i] / expls[0],
+                    ratio=torch.inf if expls[0] == 0 else expls[i] / expls[0],
                     argmin=argmin,
                     elapsed=rts[i],
                 )
@@ -518,7 +518,7 @@ class MFOMO(Algorithm):
                     logger.insert_row(
                         i=i,
                         expl=expls[i],
-                        ratio=expls[i] / expls[0],
+                        ratio=torch.inf if expls[0] == 0 else expls[i] / expls[0],
                         argmin=argmin,
                         elapsed=rts[i],
                     )
@@ -528,7 +528,7 @@ class MFOMO(Algorithm):
         logger.insert_row(
             i=max_iter,
             expl=expls[max_iter],
-            ratio=expls[max_iter] / expls[0],
+            ratio=torch.inf if expls[0] == 0 else expls[max_iter] / expls[0],
             argmin=argmin,
             elapsed=rts[max_iter],
         )

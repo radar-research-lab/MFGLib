@@ -89,7 +89,7 @@ class MESOB:
         social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """TODO -- what is the best way to specify social metrics and weights?"""
         if social_reward is None:
             social_reward = lambda _: 0.0
@@ -131,9 +131,9 @@ class MESOB:
             pi = d / d.sum(dim=-1, keepdim=True)
             pi = pi.nan_to_num(nan=1 / n_actions)
 
-            pis[i] = pi.data.clone()
+            pis[i] = pi.detach().clone()
             expls[i] = expl_score(env, pi)
-            obj_vals[i] = obj_val.data.clone()
+            obj_vals[i] = obj_val.detach().clone()
 
             opt.zero_grad()
             obj_val.backward()
