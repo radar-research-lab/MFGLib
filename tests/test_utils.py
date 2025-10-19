@@ -5,10 +5,7 @@ import pytest
 import torch
 
 from mfglib.alg import OnlineMirrorDescent
-from mfglib.alg.utils import (
-    hat_initialization,
-    project_onto_simplex,
-)
+from mfglib.alg.utils import hat_initialization, project_onto_simplex
 from mfglib.env import Environment
 from mfglib.utils import mean_field_from_policy
 
