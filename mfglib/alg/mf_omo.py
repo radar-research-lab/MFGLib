@@ -27,11 +27,11 @@ from mfglib.alg.mf_omo_residual_balancing import mf_omo_residual_balancing
 from mfglib.alg.utils import (
     _ensure_free_tensor,
     _trigger_early_stopping,
-    extract_policy_from_mean_field,
     hat_initialization,
 )
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score
+from mfglib.utils import policy_from_mean_field
 
 DEFAULT_OPTIMIZER = {
     "name": "Adam",
@@ -400,13 +400,13 @@ class MFOMO(Algorithm):
         soft_max = torch.nn.Softmax(dim=-1)
 
         if not self.parameterize:
-            pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
+            pi = policy_from_mean_field(L_u_tensor.clone().detach(), env=env)
         else:
-            pi = extract_policy_from_mean_field(
-                env,
+            pi = policy_from_mean_field(
                 soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                     (T + 1,) + S + A
                 ),
+                env=env,
             )
 
         pis = [pi]
@@ -493,13 +493,13 @@ class MFOMO(Algorithm):
 
             # Compute and store solution policy
             if not self.parameterize:
-                pi = extract_policy_from_mean_field(env, L_u_tensor.clone().detach())
+                pi = policy_from_mean_field(L_u_tensor.clone().detach(), env=env)
             else:
-                pi = extract_policy_from_mean_field(
-                    env,
+                pi = policy_from_mean_field(
                     soft_max(L_u_tensor.clone().detach().flatten(start_dim=1)).reshape(
                         (T + 1,) + S + A
                     ),
+                    env=env,
                 )
 
             pis.append(pi.clone().detach())

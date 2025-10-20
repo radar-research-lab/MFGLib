@@ -4,8 +4,10 @@ import numpy as np
 import pytest
 import torch
 
+from mfglib.alg import OnlineMirrorDescent
 from mfglib.alg.utils import hat_initialization, project_onto_simplex
 from mfglib.env import Environment
+from mfglib.utils import mean_field_from_policy
 
 
 def test_project_onto_simplex() -> None:
@@ -54,3 +56,68 @@ def test_hat_initialization(env: Environment) -> None:
         assert v_hat.shape == (tuple_prod(size) + 1,)
     assert isinstance(w_hat, torch.Tensor)
     assert w_hat.shape == (tuple_prod((env.T + 1, *env.S)),)
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        Environment.left_right(),
+        Environment.rock_paper_scissors(),
+        Environment.susceptible_infected(),
+        Environment.conservative_treasure_hunting(),
+        Environment.equilibrium_price(),
+    ],
+)
+def test_policy_mean_field_consistency(env: Environment) -> None:
+    """Verify that the policy is consistent with the mean-field."""
+    algorithm = OnlineMirrorDescent()  # chosen arbitrarily
+
+    sols, _, _ = algorithm.solve(env)
+    pi = sols[-1]
+    L = mean_field_from_policy(pi, env=env)
+
+    l_s = len(env.S)
+    l_a = len(env.A)
+    dim = tuple(range(l_s, l_s + l_a))
+
+    for t in range(env.T + 1):
+        conditional = L[t] / L[t].sum(dim=dim, keepdim=True)
+        mask = ~conditional.isnan()
+        assert torch.allclose(
+            conditional.masked_select(mask),
+            pi[t].masked_select(mask),
+        )
+
+
+def test_mean_field_on_lr() -> None:
+    left_right = Environment.left_right()
+
+    pi = torch.tensor(
+        [
+            [[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]],
+            [[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]],
+        ],
+    )
+    L = mean_field_from_policy(pi, env=left_right)
+
+    assert torch.allclose(
+        L[0],
+        torch.tensor(
+            [
+                [0.5, 0.5],
+                [0.0, 0.0],
+                [0.0, 0.0],
+            ],
+        ),
+    )
+
+    assert torch.allclose(
+        L[1],
+        torch.tensor(
+            [
+                [0.0, 0.0],
+                [0.25, 0.25],
+                [0.25, 0.25],
+            ],
+        ),
+    )

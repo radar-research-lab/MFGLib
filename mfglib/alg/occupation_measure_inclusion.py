@@ -18,9 +18,8 @@ from scipy import sparse
 
 from mfglib.alg.abc import Iterative
 from mfglib.alg.mf_omo_params import mf_omo_params
-from mfglib.alg.utils import extract_policy_from_mean_field
 from mfglib.env import Environment
-from mfglib.mean_field import mean_field
+from mfglib.utils import mean_field_from_policy, policy_from_mean_field
 
 
 # TODO: consider update vectors to be more efficient
@@ -125,7 +124,7 @@ class OccupationMeasureInclusion(Iterative[State]):
         return f"OccupationMeasureInclusion({self.alpha=}, {self.eta=})"
 
     def init_state(self, env: Environment, pi_0: torch.Tensor) -> State:
-        d = mean_field(env, pi_0)
+        d = mean_field_from_policy(pi_0, env=env)
         return State(env=env, pi=pi_0, d=d, x0=None, y0=None)
 
     def step_next_state(
@@ -150,8 +149,8 @@ class OccupationMeasureInclusion(Iterative[State]):
         # NOTE: The unused-ignore tag can be removed when we drop support for Python 3.9
         d, x0, y0 = osqp_proj(d.flatten(), b, A_d, x0, y0, osqp_atol, osqp_rtol)  # type: ignore[assignment,arg-type,unused-ignore]
         d = d.reshape(*d_shape)
-        pi = extract_policy_from_mean_field(
-            state.env, d.clone().detach(), tolerance=(osqp_atol + osqp_rtol) / 2 * 10
+        pi = policy_from_mean_field(
+            d.clone().detach(), env=state.env, tol=(osqp_atol + osqp_rtol) / 2 * 10
         )
 
         if self.osqp_warmstart:

@@ -14,7 +14,7 @@ import torch
 from mfglib.alg.abc import Iterative
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
-from mfglib.mean_field import mean_field
+from mfglib.utils import mean_field_from_policy
 
 
 @dataclass
@@ -52,7 +52,7 @@ class OnlineMirrorDescent(Iterative[State]):
     def step_next_state(
         self, state: State, atol: float | None, rtol: float | None
     ) -> State:
-        L = mean_field(state.env, state.pi)
+        L = mean_field_from_policy(state.pi, env=state.env)
         Q = QFn(state.env, L, verify_integrity=False).for_policy(state.pi)
         y = state.y + self.alpha * Q
         n_state_coords = len(state.env.S)

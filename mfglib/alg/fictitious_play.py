@@ -14,7 +14,7 @@ import torch
 from mfglib.alg.abc import Iterative
 from mfglib.alg.greedy_policy_given_mean_field import Greedy_Policy
 from mfglib.env import Environment
-from mfglib.mean_field import mean_field
+from mfglib.utils import mean_field_from_policy
 
 
 @dataclass
@@ -63,9 +63,9 @@ class FictitiousPlay(Iterative[State]):
     def step_next_state(
         self, state: State, atol: float | None, rtol: float | None
     ) -> State:
-        L = mean_field(state.env, state.pi)
+        L = mean_field_from_policy(state.pi, env=state.env)
         pi_br = Greedy_Policy(state.env, L)
-        L_br = mean_field(state.env, pi_br)
+        L_br = mean_field_from_policy(pi_br, env=state.env)
 
         pi = state.pi
         states_dim = len(state.env.S)

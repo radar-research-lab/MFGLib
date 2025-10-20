@@ -7,9 +7,10 @@ import torch
 
 from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
-from mfglib.mean_field import mean_field
 
 __all__ = ["exploitability_score"]
+
+from mfglib.utils import mean_field_from_policy
 
 
 def postprocess_policy(env_instance: Environment, pi: torch.Tensor) -> torch.Tensor:
@@ -62,7 +63,7 @@ def exploitability_score(
     mu0 = env_instance.mu0
     l_S = len(env_instance.S)
 
-    gamma_pi = mean_field(env_instance, pi)
+    gamma_pi = mean_field_from_policy(pi, env=env_instance)
 
     q_fn = QFn(env_instance, gamma_pi, verify_integrity=False)
 
