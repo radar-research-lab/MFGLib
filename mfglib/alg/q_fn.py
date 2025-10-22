@@ -26,13 +26,11 @@ class QFn:
         verify_integrity: Optionally verify that L contains valid joint probabilities.
         """
         if verify_integrity:
-            for t, L_t in enumerate(L):
-                if (L_t < 0).any():
-                    raise ValueError(f"negative probability found in time index {t}")
-                if (L_t.sum() - 1.0).abs() > 1e-02:
-                    raise ValueError(
-                        f"joint probability did not sum to 1 in time index {t}"
-                    )
+            if (L < 0).any():
+                raise ValueError("negative probability detected")
+            p = L.flatten(start_dim=1).sum(dim=1)
+            if not torch.isclose(p, torch.tensor(1.0, dtype=p.dtype)).all():
+                raise ValueError(f"probability does not sum to 1: {L}")
         self.env = env
         self.L = L
 

@@ -78,7 +78,7 @@ class MESOB:
             return err.square().sum()
 
     def __init__(
-        self, λ: tuple[float, float], ρ: tuple[float, float] = (1.0, 1.0)
+        self, λ: tuple[float, float] = (0, 1), ρ: tuple[float, float] = (1, 1)
     ) -> None:
         self.λ = λ
         self.ρ = ρ
@@ -89,7 +89,14 @@ class MESOB:
         social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
         """TODO -- what is the best way to specify social metrics and weights?"""
         if social_reward is None:
             social_reward = lambda _: 0.0
