@@ -9,7 +9,7 @@ class TransitionFn:
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
         mu_t = L_t.sum(dim=1)
 
-        p_t = torch.zeros(2, 2, 2)
+        p_t = torch.zeros(2, 2, 2, dtype=torch.double)
         for s in range(2):
             for a in range(2):
                 if s == 1:
@@ -26,7 +26,7 @@ class TransitionFn:
 
 class RewardFn:
     def __init__(self) -> None:
-        self.r = torch.zeros(2, 2)
+        self.r = torch.zeros(2, 2, dtype=torch.double)
         self.r[0, 1] = -0.5
         self.r[1, 0] = -1.0
         self.r[1, 1] = -1.5

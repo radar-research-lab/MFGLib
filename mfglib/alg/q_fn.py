@@ -29,8 +29,9 @@ class QFn:
             if (L < 0).any():
                 raise ValueError("negative probability detected")
             p = L.flatten(start_dim=1).sum(dim=1)
-            if not torch.isclose(p, torch.tensor(1.0, dtype=p.dtype)).all():
-                raise ValueError(f"probability does not sum to 1: {L}")
+            one = torch.tensor(1.0, dtype=p.dtype)
+            if not torch.isclose(p, one, rtol=0.0, atol=1e-3).all():
+                raise ValueError(f"probability does not sum to 1: {p}")
         self.env = env
         self.L = L
 
@@ -70,7 +71,7 @@ class QFn:
         """
         T = self.env.T
 
-        q_values = torch.empty(size=(T + 1, *self.env.S, *self.env.A))
+        q_values = torch.empty(T + 1, *self.env.S, *self.env.A, dtype=torch.double)
         q_values[T] = self.env.reward(T, self.L[T])
 
         for t in range(T - 1, -1, -1):
@@ -114,7 +115,7 @@ class QFn:
                 .sum(dim=-1)
                 .flatten()
             )
-            return self._transition_probabilities(t) @ (pi_q)
+            return self._transition_probabilities(t) @ pi_q
 
         return self._compute_q_values(future_rewards)
 

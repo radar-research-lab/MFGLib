@@ -6,6 +6,7 @@ import torch.nn
 
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score as expl_score
+from mfglib.utils import policy_from_mean_field, mean_field_from_policy
 
 
 class MESOB:
@@ -38,41 +39,51 @@ class MESOB:
         def forward(
             self, d: torch.Tensor, y: torch.Tensor, z: torch.Tensor
         ) -> torch.Tensor:
+            d_shaped = d.reshape(self.env.T + 1, *self.env.S, *self.env.A)
             return (
-                -self.λ[0] * self.social_reward(d)
+                -self.λ[0] * self.social_reward(d_shaped)
                 + self.λ[1] * torch.einsum("tsa,tsa->", z, d)
                 + self.ρ[0] * self.g(d)
                 + self.ρ[1] * self.h(y, z, d)
             )
 
         def g(self, d: torch.Tensor) -> torch.Tensor:
-            err = torch.empty(self.env.T + 1, self.env.n_states)
-            for t in range(self.env.T):
-                P_t = self.env.prob(t, d[t])
+            T = self.env.T
+            n_states = self.env.n_states
+            n_actions = self.env.n_actions
+
+            err = torch.empty(T + 1, n_states)
+            for t in range(T):
+                d_t = d[t].reshape(*self.env.S, *self.env.A)
+                P_t = self.env.prob(t, d_t).reshape(n_states, n_states, n_actions)
                 term_1 = torch.einsum("jsa,sa->j", P_t, d[t])
                 term_2 = torch.einsum("ja->j", d[t + 1])
                 err[t] = term_1 - term_2
-            err[self.env.T] = torch.einsum("sa->s", d[0]) - self.env.mu0
+            err[T] = torch.einsum("sa->s", d[0]) - self.env.mu0.reshape(n_states)
             return err.square().sum()
 
         def h(self, y: torch.Tensor, z: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
             T = self.env.T
             n_states = self.env.n_states
             n_actions = self.env.n_actions
-            err = torch.empty(T + 1, n_states, n_actions)
-            Z = torch.eye(n_states).unsqueeze(dim=1).repeat(1, n_actions, 1)
-            c_0 = -self.env.reward(0, d[0])
-            P_0 = self.env.prob(0, d[0])
+
+            err = torch.empty(T + 1, n_states, n_actions, dtype=torch.double)
+            Z = torch.eye(n_states, dtype=torch.double).unsqueeze(dim=1).repeat(1, n_actions, 1)
+            d_0 = d[0].reshape(*self.env.S, *self.env.A)
+            c_0 = -self.env.reward(0, d_0).reshape(n_states, n_actions)
+            P_0 = self.env.prob(0, d_0).reshape(n_states, n_states, n_actions)
             term_1 = torch.einsum("jsa,j->sa", P_0, y[0])
             term_2 = torch.einsum("saj,j->sa", Z, y[T])
             err[0] = term_1 + term_2 + z[0] - c_0
             for t in range(1, T):
-                c_t = -self.env.reward(t, d[t])
-                P_t = self.env.prob(t, d[t])
+                d_t = d[t].reshape(*self.env.S, *self.env.A)
+                c_t = -self.env.reward(t, d_t).reshape(n_states, n_actions)
+                P_t = self.env.prob(t, d_t).reshape(n_states, n_states, n_actions)
                 term_1 = torch.einsum("saj,j->sa", -Z, y[t - 1])
                 term_2 = torch.einsum("jsa,j->sa", P_t, y[t])
                 err[t] = term_1 + term_2 + z[t] - c_t
-            c_T = -self.env.reward(T, d[T])
+            d_T = d[T].reshape(*self.env.S, *self.env.A)
+            c_T = -self.env.reward(T, d_T).reshape(n_states, n_actions)
             term_1 = torch.einsum("saj,j->sa", -Z, y[T - 1])
             err[T] = term_1 + z[T] - c_T
             return err.square().sum()
@@ -89,14 +100,7 @@ class MESOB:
         social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
-    ) -> tuple[
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-    ]:
+    ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
         """TODO -- what is the best way to specify social metrics and weights?"""
         if social_reward is None:
             social_reward = lambda _: 0.0
@@ -107,13 +111,13 @@ class MESOB:
         n_actions = env.n_actions
         r_max = env.r_max
 
-        default_d0 = torch.ones(T + 1, n_states, n_actions) / n_states / n_actions
-        default_y0 = torch.zeros(T + 1, n_states)
-        default_z0 = torch.zeros(T + 1, n_states, n_actions)
+        default_d0 = torch.ones(T + 1, n_states, n_actions, dtype=torch.double) / n_states / n_actions
+        default_y0 = torch.zeros(T + 1, n_states, dtype=torch.double)
+        default_z0 = torch.zeros(T + 1, n_states, n_actions, dtype=torch.double)
 
-        d = kwargs.pop("d0", default_d0)
-        y = kwargs.pop("y0", default_y0)
-        z = kwargs.pop("z0", default_z0)
+        d = kwargs.pop("d0", default_d0).to(dtype=torch.double)
+        y = kwargs.pop("y0", default_y0).to(dtype=torch.double)
+        z = kwargs.pop("z0", default_z0).to(dtype=torch.double)
 
         d.requires_grad_(True)
         y.requires_grad_(True)
@@ -128,90 +132,111 @@ class MESOB:
         y_radius = n_states * (T + 1) * (T + 2) * r_max / 2
         z_radius = n_states * n_actions * (T**2 + T + 2) * r_max
 
-        pis = torch.empty(max_iter + 1, T + 1, n_states, n_actions)
-        expls = torch.empty(max_iter + 1)
-        obj_vals = torch.empty(max_iter + 1)
+        pis = torch.empty(max_iter + 1, T + 1, *env.S, *env.A)
+        stats = {
+            "expls": torch.empty(max_iter + 1, dtype=torch.double),
+            "welfs_1": torch.empty(max_iter + 1, dtype=torch.double),
+            "welfs_2": torch.empty(max_iter + 1, dtype=torch.double),
+            "objvals": torch.empty(max_iter + 1, dtype=torch.double),
+            "h": torch.empty(max_iter + 1, dtype=torch.double),
+            "g": torch.empty(max_iter + 1, dtype=torch.double)
+        }
 
         for i in range(max_iter):
+            opt.zero_grad()
             obj_val = obj(d, y, z)
 
-            pi = d / d.sum(dim=-1, keepdim=True)
-            pi = pi.nan_to_num(nan=1 / n_actions)
+            with torch.no_grad():
+                d_shaped = d.reshape(T + 1, *env.S, *env.A)
+                pis[i] = pi = policy_from_mean_field(d_shaped, env=env)
+                d_alt = mean_field_from_policy(pi, env=env)
 
-            pis[i] = pi.detach().clone()
-            expls[i] = expl_score(env, pi)
-            obj_vals[i] = obj_val.detach().clone()
+                stats["expls"][i] = expl_score(env, pi)
+                stats["welfs_1"][i] = social_reward(d)
+                stats["welfs_2"][i] = social_reward(d_alt)
+                stats["objvals"][i] = obj_val
+                stats["h"][i] = obj.h(y, z, d)
+                stats["g"][i] = obj.g(d)
 
-            opt.zero_grad()
             obj_val.backward()
             opt.step()
 
-            d.data = project_simplex(d.data, axis=0)
-            y.data = project_l2_ball(y.data, r=y_radius)
-            z.data = project_Z_set(z.data, r=z_radius)
+            with torch.no_grad():
+                d_next = d.flatten(start_dim=1)
+                d_next = project_simplex(d_next)
+                d_next = d_next.reshape(d.shape)
 
-        obj_val = obj(d, y, z)
+                y_next = project_l2_ball(y, radius=y_radius)
+                z_next = project_Z_set(z, radius=z_radius)
 
-        pi = d / d.sum(dim=-1, keepdim=True)
-        pi = pi.nan_to_num(nan=1 / n_actions)
+                assert torch.all(d_next >= 0)
+                dt = d_next.sum(dim=tuple(range(1, d_next.ndim)))
+                assert torch.allclose(dt, torch.ones_like(dt))
 
-        pis[max_iter] = pi.data.clone()
-        expls[max_iter] = expl_score(env, pi)
-        obj_vals[max_iter] = obj_val.data.clone()
+                yt = y_next.norm(p=2, dim=tuple(range(1, y_next.ndim)))
+                assert torch.all(yt <= y_radius)
 
-        return pis, expls, obj_vals, d.detach(), y.detach(), z.detach()
+                assert torch.all(z_next >= 0)
+                zt = z_next.sum(dim=tuple(range(1, z_next.ndim)))
+                assert torch.all(zt <= z_radius + 1e-10), f"{zt.max()=}, {z_radius=}"
 
+                d.copy_(d_next)
+                y.copy_(y_next)
+                z.copy_(z_next)
 
-def project_simplex(v: torch.Tensor, r: float = 1.0, axis: int = -1) -> torch.Tensor:
-    """TODO.
-    Args:
-        v:
-        r:
-        axis:
-    Returns:
-    """
-    if r == 0.0:
-        return torch.zeros_like(v)
+        with torch.no_grad():
+            d_shaped = d.reshape(T + 1, *env.S, *env.A)
+            pis[max_iter] = pi = policy_from_mean_field(d_shaped, env=env)
+            d_alt = mean_field_from_policy(pi, env=env)
 
-    def project_simplex_2d(v_2d: torch.Tensor) -> torch.Tensor:
-        """Helper function.
-        Args:
-            v_2d: (M, N)-shaped collection of vectors. Each row is interpreted
-                as an N-dimensional vector.
-        Returns:
-            (M, N)-shaped tensor with each row residing in the z-simplex.
-        """
-        M, N = v_2d.shape
-        mu = torch.sort(v_2d, dim=1, descending=True)[0]
-        cumsum = torch.cumsum(mu, dim=1)
-        j = torch.arange(1, N + 1).repeat(M, 1)
-        ρ = torch.sum(mu * j - cumsum + r > 0.0, dim=1, keepdim=True) - 1
-        theta = (cumsum.gather(1, ρ) - r) / (ρ + 1)
-        return torch.clamp(v_2d - theta, min=0.0)
+            stats["expls"][max_iter] = expl_score(env, pi)
+            stats["welfs_1"][max_iter] = social_reward(d)
+            stats["welfs_2"][max_iter] = social_reward(d_alt)
+            stats["objvals"][max_iter] = obj(d, y, z)
+            stats["h"][max_iter] = obj.h(y, z, d)
+            stats["g"][max_iter] = obj.g(d)
 
-    shape = v.shape
+        dyz = dict(d=d.detach(), y=y.detach(), z=z.detach())
 
-    if len(shape) == 1:
-        v_2d = torch.unsqueeze(v, 0)
-        return project_simplex_2d(v_2d)[0]
-    else:
-        axis = axis % len(shape)
-        v_2d = v.movedim(axis, 0).flatten(start_dim=1)
-        w_2d = project_simplex_2d(v_2d)
-        w_2d = w_2d.reshape([shape[axis], *shape[1:axis], *shape[axis + 1 :]])
-        return w_2d.movedim(axis, 0)
+        return dict(pis=pis, stats=stats, dyz=dyz)
 
 
-def project_l2_ball(v: torch.Tensor, *, r: float = 1.0) -> torch.Tensor:
+def project_simplex(tensor, dim=-1, radius=1.0):
+    sorted_tensor, _ = torch.sort(tensor, descending=True, dim=dim)
+    cumsum_tensor = torch.cumsum(sorted_tensor, dim=dim)
+
+    shape = list(tensor.shape)
+    n_features = shape[dim]
+
+    indices = torch.arange(1, n_features + 1, dtype=tensor.dtype)
+    view_shape = [1] * len(shape)
+    view_shape[dim] = n_features
+    indices = indices.view(*view_shape)
+
+    threshold_candidates = (cumsum_tensor - radius) / indices
+
+    mask = sorted_tensor > threshold_candidates
+    rho = torch.sum(mask, dim=dim, keepdim=True)
+
+    rho_indices = (rho - 1).long()
+    theta = torch.gather(threshold_candidates, dim, rho_indices)
+
+    projected_tensor = torch.relu(tensor - theta)
+
+    return projected_tensor
+
+
+def project_l2_ball(v: torch.Tensor, *, radius: float = 1.0) -> torch.Tensor:
     v_norm = v.norm()
-    if v_norm <= r:
+    if v_norm <= radius:
         return v
     else:
-        return v / v_norm * r  # type: ignore[no-any-return]
+        return v / v_norm * radius  # type: ignore[no-any-return]
 
 
-def project_Z_set(z: torch.Tensor, *, r: float) -> torch.Tensor:
-    z_clamp = z.ravel().clamp(min=0)
-    if z_clamp.sum() > r:
-        z_clamp = project_simplex(z_clamp, r=r)
+def project_Z_set(z: torch.Tensor, *, radius: float) -> torch.Tensor:
+    z_clamp = z.clamp(min=0)
+    if z_clamp.sum() > radius:
+        z_clamp = z.flatten(start_dim=1)
+        z_clamp = project_simplex(z_clamp, radius=radius)
     return z_clamp.reshape(z.shape)

@@ -19,7 +19,7 @@ def mean_field_from_policy(pi: torch.Tensor, *, env: Environment) -> torch.Tenso
     A tensor with dimensions (T+1 *S, *A) where each time slice represents a
     *joint* probability distribution over states and actions.
     """
-    L = torch.empty(size=[env.T + 1, env.n_states, env.n_actions])
+    L = torch.empty(size=[env.T + 1, env.n_states, env.n_actions], dtype=torch.double)
 
     S_dim = len(env.S)
 

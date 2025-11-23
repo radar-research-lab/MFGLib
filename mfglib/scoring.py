@@ -5,7 +5,6 @@ from typing import cast, overload
 import numpy as np
 import torch
 
-from mfglib.alg.q_fn import QFn
 from mfglib.env import Environment
 
 __all__ = ["exploitability_score"]
@@ -54,6 +53,8 @@ def exploitability_score(
     precision: float | None = None,
 ) -> float | list[float]:
     """Compute the exploitability metric for a given policy (or policies)."""
+    from mfglib.alg.q_fn import QFn
+
     if isinstance(pi, list):
         return [exploitability_score(env_instance, x) for x in pi]
 
