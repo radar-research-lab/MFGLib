@@ -76,7 +76,9 @@ and time-consuming process that hinders reproducibility and comparison of new al
 It lowers the barrier to entry for new researchers, enables rapid experimentation, and offers practitioners a way to 
 prototype MFG-based models without requiring deep expertise in game theory or optimal control.
 
-MFGLib therefore fills an important gap in the scientific software ecosystem for large-population games.
+MFGLib therefore fills an important gap in the scientific software ecosystem for large-population games. The library 
+is implemented in Python, maintained on GitHub, and can be installed via `pip install mfglib`. Full documentation, 
+tutorials, and example notebooks are available at [https://mfglib.readthedocs.io/en/latest/?badge=latest].
 
 # Acknowledgments
 
