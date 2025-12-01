@@ -72,11 +72,11 @@ support for mean-field interaction structures, population distributions, or MFG-
 reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions, 
 and stable APIs.
 
-Among the very few existing MFG libraries, is the closest one to **MFGLib**. **OpenSpiel** includes an MFG module, 
+Among the very few existing MFG libraries, **OpenSpiel** is the closest to **MFGLib**. **OpenSpiel** includes an MFG module, 
 but it lacks customizability and a user-friendly API for general users. According to its documentation, the MFG code 
 is experimental and recommended only for internal use.
 
-As a result, researchers re-implement environments, MFG solvers, and population dynamics from scratch—an
+As a result, researchers re-implement environments, MFG solvers, and population dynamics from scratch -- an
 error-prone and time-consuming process that hinders reproducibility and comparison of new algorithms.
 
 **MFGLib addresses this need as the first general-purpose, customizable, and well-documented MFG library.**
@@ -91,12 +91,12 @@ Users can define custom MFG environments by providing reward functions, transiti
 problem parameters (time horizon, state/action space sizes, initial distribution). The reward and transition 
 functions are simple callables that map time and population distribution to tensors, allowing users to create 
 environments with minimal code while maintaining mathematical clarity. The library also includes ten pre-loaded 
-benchmark environments from the literature [@cui:2021; @perrin:2020; @perolat:2021; @guo:2019; @guo:2024] 
+benchmark environments from the literature [@cui:2021; @perrin:2020; @perolat:2021; @guo:2019; @guo:2023] 
 that can be instantiated directly with customizable parameters.
 
-## State-of-the-Art Algorithms
+## Pre-Implemented Algorithms
 
-MFGLib implements several widely used algorithms, including **Online Mirror Descent** [@perolat:2021], 
+**MFGLib** implements several widely used algorithms, including **Online Mirror Descent** [@perolat:2021], 
 **Fictitious Play** [@perrin:2020], **MFOMO** [@guo:2023], **MFOMI** [@hu:2024], and **Prior Descent** [@cui:2021]. 
 These algorithms encompass many other existing methods as special cases, such as fixed point iteration and **GMF-V** 
 [@guo:2019]. The unified solver interface returns policy iterates, exploitability scores (which evaluate 
@@ -104,7 +104,7 @@ closeness to Nash equilibrium), and cumulative runtimes, with optional real-time
 
 ## Automatic Hyperparameter Tuning
 
-Every algorithm requires hyperparameters that can drastically influence convergence properties. MFGLib provides 
+Every algorithm requires hyperparameters that can drastically influence convergence properties. **MFGLib** provides 
 a built-in tuner based on **Optuna** [@akiba:2019] to automatically select optimal hyperparameters. The tuner can 
 optimize across single instances or environment suites with multiple policy initializations and customizable 
 metrics (e.g., shifted geometric mean of exploitability). Users can also implement their own metrics with 
