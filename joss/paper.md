@@ -25,7 +25,7 @@ affiliations:
     - name: Citadel Securities
       index: 4
 date: 1 December 2025
-bibliography: joss/paper.bib
+bibliography: paper.bib
 ---
 
 # Summary
@@ -33,7 +33,7 @@ bibliography: joss/paper.bib
 Mean-field games (MFGs) provide scalable models for large-population strategic interactions. 
 They approximate an $N$-player game by analyzing the limiting regime as $N \to \infty$, 
 replacing explicit multi-agent interactions with the interaction between a representative agent 
-and the population distribution `[@lasry:2007]`. MFG models have become widely used in applications 
+and the population distribution [@lasry:2007]. MFG models have become widely used in applications 
 such as digital advertising, high-frequency trading, dynamic pricing, transportation, and behavioral 
 modeling.
 
