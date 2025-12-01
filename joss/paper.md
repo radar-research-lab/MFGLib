@@ -78,7 +78,7 @@ prototype MFG-based models without requiring deep expertise in game theory or op
 
 MFGLib therefore fills an important gap in the scientific software ecosystem for large-population games. The library 
 is implemented in Python, maintained on GitHub, and can be installed via `pip install mfglib`. Full documentation, 
-tutorials, and example notebooks are available at [https://mfglib.readthedocs.io/en/latest/?badge=latest].
+tutorials, and example notebooks are available at https://mfglib.readthedocs.io/en/latest/.
 
 # Acknowledgments
 
