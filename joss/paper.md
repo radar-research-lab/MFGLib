@@ -25,7 +25,7 @@ affiliations:
     - name: Citadel Securities
       index: 4
 date: 1 December 2025
-bibliography: paper.bib
+bibliography: joss/paper.bib
 ---
 
 # Summary
