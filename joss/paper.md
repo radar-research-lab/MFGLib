@@ -129,7 +129,7 @@ We demonstrate the usage of our library with a brief example: a mean-field varia
 introduced by @cui:2021. Each agent chooses rock, paper or scissors, and receives a reward 
 proportional to twice the number of beaten agents minus the number of agents that beat them. 
 
-Formally, the state and action spaces are $\mathcal{S} = \{ 0, R, P, S \}$ and $\mathcal{A} = \mathcal{A} \\ \{ 0 \}$,
+Formally, the state and action spaces are $\mathcal{S} = \{ 0, R, P, S \}$ and $\mathcal{A} = \mathcal{S} \setminus \{ 0 \}$,
 respectively. The initial state distribution is fixed at $\mu_0(0) = 1$, and the game occurs over timesteps 
 $\mathcal{T} = \{ 0, 1, \dots, 10 \}$. Agent rewards are specified by
 \begin{align*}
