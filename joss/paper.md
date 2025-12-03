@@ -123,6 +123,30 @@ flexible user interactions.
 with `black` and `ruff`, and strict type-checking with `mypy`. The pure Python implementation requires no 
 complicated build process, and allows runtime introspection.
 
+# Example
+
+We demonstrate the usage of our library with a brief example. We present a mean-field variant of Rock-Paper-Scissors 
+introduced in [cui:2021]. Each of the agents can choose between rock, paper and  scissors, and obtains a reward 
+proportional to twice the number of beaten agents minus the number of agents beating the agent. 
+
+Formally, the state and action spaces are given by $\mathcal{S} = \{ 0, R, P, S \}$ and $\mathcal{A} = \mathcal{A} \\ \{ 0 \}$,
+respectively. The initial state distribution is fixed so $\mu_0(0) = 1$, and the game occurs over timesteps 
+$\mathcal{T} = \{ 0, 1 \}$. The agent rewards are specified by
+\begin{align*}
+r(R, a, \mu_t) &= 2 \cdot \mu_t(S) - 1 \cdot \mu_t(P) \\
+r(P, a, \mu_t) &= 4 \cdot \mu_t(R) - 2 \cdot \mu_t(S) \\
+r(S, a, \mu_t) &= 6 \cdot \mu_t(P) - 3 \cdot \mu_t(R) \\
+\end{align*}
+and the transition function allows picking the next state directly and independently of the population, ie. for all 
+$s, s' \in \mathcal{S}$, $a \in \mathcal{A}$,
+$$\Pr(s_{t + 1} = s' \mid s_t = s, a_t = a)$$
+
+We tune two algorithms, **OnlineMirrorDescent** [@perolat:2021] and *OccupationMeasureInclusion** [@hu:2024] on this 
+environment. As the plot below illustrates, tuning results in significantly improved performance (faster decrease in 
+exploitability).
+
+![Exploitability curves before and after hyperparameter tuning](visualization.png)
+
 # Acknowledgments
 
 An early pre-release version of MFGLib was used internally at Amazon Advertising and influenced several design choices.
