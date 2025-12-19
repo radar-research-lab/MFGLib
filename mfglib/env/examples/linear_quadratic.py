@@ -29,7 +29,7 @@ class TransitionFn:
         n_s = 2 * self.el + 1
         n_a = 2 * self.m + 1
 
-        p_t = torch.zeros(n_s, n_s, n_a)
+        p_t = torch.zeros(n_s, n_s, n_a, dtype=torch.double)
         for s in range(n_s):
             for a in range(n_a):
                 for epsilon, epsilon_pr in zip(self.epsilon, self.epsilon_pr):

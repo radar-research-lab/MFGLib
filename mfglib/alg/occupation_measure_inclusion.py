@@ -54,7 +54,7 @@ def osqp_proj(
 
     # numpy default is double which is fine; but to get matmul(A, sol) work needs
     # both to be same type
-    sol = torch.tensor(res.x).float()
+    sol = torch.tensor(res.x)
 
     return sol, res.x, res.y
 

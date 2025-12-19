@@ -9,8 +9,8 @@ from mfglib.env import Environment
 
 class TransitionFn:
     def __init__(self, n: int, m: float) -> None:
-        self.p1 = 2 * m * torch.rand(n, n, n) - m
-        self.p2 = 2 * m * torch.rand(n, n, n) - m
+        self.p1 = 2 * m * torch.rand(n, n, n, dtype=torch.double) - m
+        self.p2 = 2 * m * torch.rand(n, n, n, dtype=torch.double) - m
 
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
         soft_max = torch.nn.Softmax(dim=0)
@@ -22,8 +22,8 @@ class TransitionFn:
 
 class RewardFn:
     def __init__(self, n: int, m: float) -> None:
-        self.r1 = 2 * m * torch.rand(n, n) - m
-        self.r2 = 2 * m * torch.rand(n, n) - m
+        self.r1 = 2 * m * torch.rand(n, n, dtype=torch.double) - m
+        self.r2 = 2 * m * torch.rand(n, n, dtype=torch.double) - m
 
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
         return self.r1 @ L_t + self.r2

@@ -100,7 +100,7 @@ class MESOB:
         social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
-    ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
+    ) -> dict[str, torch.Tensor]:
         """TODO -- what is the best way to specify social metrics and weights?"""
         if social_reward is None:
             social_reward = lambda _: 0.0
@@ -132,32 +132,18 @@ class MESOB:
         y_radius = n_states * (T + 1) * (T + 2) * r_max / 2
         z_radius = n_states * n_actions * (T**2 + T + 2) * r_max
 
-        pis = torch.empty(max_iter + 1, T + 1, *env.S, *env.A)
-        stats = {
-            "expls": torch.empty(max_iter + 1, dtype=torch.double),
-            "welfs_1": torch.empty(max_iter + 1, dtype=torch.double),
-            "welfs_2": torch.empty(max_iter + 1, dtype=torch.double),
-            "objvals": torch.empty(max_iter + 1, dtype=torch.double),
-            "h": torch.empty(max_iter + 1, dtype=torch.double),
-            "g": torch.empty(max_iter + 1, dtype=torch.double)
-        }
+        expl = torch.empty(max_iter, dtype=torch.double)
+        welf = torch.empty(max_iter, dtype=torch.double)
+        grad_norm = torch.empty(max_iter, dtype=torch.double)
 
         for i in range(max_iter):
+            with torch.no_grad():
+                d_prev = d.clone()
+                z_prev = z.clone()
+                y_prev = y.clone()
+
             opt.zero_grad()
             obj_val = obj(d, y, z)
-
-            with torch.no_grad():
-                d_shaped = d.reshape(T + 1, *env.S, *env.A)
-                pis[i] = pi = policy_from_mean_field(d_shaped, env=env)
-                d_alt = mean_field_from_policy(pi, env=env)
-
-                stats["expls"][i] = expl_score(env, pi)
-                stats["welfs_1"][i] = social_reward(d)
-                stats["welfs_2"][i] = social_reward(d_alt)
-                stats["objvals"][i] = obj_val
-                stats["h"][i] = obj.h(y, z, d)
-                stats["g"][i] = obj.g(d)
-
             obj_val.backward()
             opt.step()
 
@@ -169,36 +155,34 @@ class MESOB:
                 y_next = project_l2_ball(y, radius=y_radius)
                 z_next = project_Z_set(z, radius=z_radius)
 
-                assert torch.all(d_next >= 0)
-                dt = d_next.sum(dim=tuple(range(1, d_next.ndim)))
-                assert torch.allclose(dt, torch.ones_like(dt))
+                _assert_dyz_is_feasible(
+                    d=d_next, y=y_next, z=z_next, y_radius=y_radius, z_radius=z_radius
+                )
 
-                yt = y_next.norm(p=2, dim=tuple(range(1, y_next.ndim)))
-                assert torch.all(yt <= y_radius)
+                Δd_norm = torch.norm(d_next - d_prev)
+                Δy_norm = torch.norm(y_next - y_prev)
+                Δz_norm = torch.norm(z_next - z_prev)
 
-                assert torch.all(z_next >= 0)
-                zt = z_next.sum(dim=tuple(range(1, z_next.ndim)))
-                assert torch.all(zt <= z_radius + 1e-10), f"{zt.max()=}, {z_radius=}"
+                d_shaped = d_next.reshape(T + 1, *env.S, *env.A)
+                pi = policy_from_mean_field(d_shaped, env=env)
+                d_pi = mean_field_from_policy(pi, env=env)
+
+                grad_norm[i] = (Δd_norm + Δy_norm + Δz_norm) / opt_kwargs["lr"]
+                expl[i] = expl_score(env, pi)
+                welf[i] = social_reward(d_pi)
 
                 d.copy_(d_next)
                 y.copy_(y_next)
                 z.copy_(z_next)
 
-        with torch.no_grad():
-            d_shaped = d.reshape(T + 1, *env.S, *env.A)
-            pis[max_iter] = pi = policy_from_mean_field(d_shaped, env=env)
-            d_alt = mean_field_from_policy(pi, env=env)
-
-            stats["expls"][max_iter] = expl_score(env, pi)
-            stats["welfs_1"][max_iter] = social_reward(d)
-            stats["welfs_2"][max_iter] = social_reward(d_alt)
-            stats["objvals"][max_iter] = obj(d, y, z)
-            stats["h"][max_iter] = obj.h(y, z, d)
-            stats["g"][max_iter] = obj.g(d)
-
-        dyz = dict(d=d.detach(), y=y.detach(), z=z.detach())
-
-        return dict(pis=pis, stats=stats, dyz=dyz)
+        return dict(
+            d=d.detach(),
+            y=y.detach(),
+            z=z.detach(),
+            grad_norm=grad_norm,
+            expl=expl,
+            welf=welf,
+        )
 
 
 def project_simplex(tensor, dim=-1, radius=1.0):
@@ -240,3 +224,24 @@ def project_Z_set(z: torch.Tensor, *, radius: float) -> torch.Tensor:
         z_clamp = z.flatten(start_dim=1)
         z_clamp = project_simplex(z_clamp, radius=radius)
     return z_clamp.reshape(z.shape)
+
+
+def _assert_dyz_is_feasible(
+    *,
+    d: torch.Tensor,
+    y: torch.Tensor,
+    z: torch.Tensor,
+    y_radius: float,
+    z_radius: float,
+    eps: float = 1e-10
+) -> None:
+    assert torch.all(d >= -eps) and torch.all(d <= 1 + eps), f"{d.min()}, {d.max()}"
+    dvec = d.flatten(start_dim=1).sum(dim=1)
+    assert torch.allclose(dvec, torch.ones_like(dvec))
+
+    yvec = y.flatten(start_dim=1).norm(p=2, dim=1)
+    assert torch.all(yvec <= y_radius)
+
+    assert torch.all(z >= 0)
+    zvec = z.flatten(start_dim=1).sum(dim=1)
+    assert torch.all(zvec <= z_radius + eps), (zvec - z_radius).max()

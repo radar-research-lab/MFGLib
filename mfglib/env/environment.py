@@ -374,7 +374,7 @@ class Environment:
             T=T,
             S=(n,),
             A=(n,),
-            mu0=mu0 if isinstance(mu0, torch.Tensor) else torch.ones(n) / n,
+            mu0=mu0 if isinstance(mu0, torch.Tensor) else torch.ones(n, dtype=torch.double) / n,
             r_max=2 * m,
             reward_fn=RewardFn(n, m),
             transition_fn=TransitionFn(n, m),
