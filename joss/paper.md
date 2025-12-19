@@ -42,9 +42,7 @@ of the mean-field game is an $\epsilon$-Nash equilibrium of the $N$-player game 
 applications such as digital advertising, high-frequency trading, dynamic pricing, transportation, and behavioral modeling.
 
 Despite the rapid growth of the MFG literature, however, researchers and practitioners lack a unified, 
-open-source software package for defining and solving their own MFG problems. Existing MFG 
-implementations are largely one-off, built for experiments within individual papers, and are 
-not designed for general use or extensibility.
+open-source software package for defining and solving their own MFG problems. 
 
 **MFGLib** is an open-source Python library that addresses this gap by providing:
 
@@ -59,18 +57,22 @@ documentation, tutorials, and example notebooks are available at https://mfglib.
 
 # Statement of need
 
-Over the past decade, numerical methods for MFGs have attracted growing interest across control theory, economics, 
-reinforcement learning, and operations research. However, the field lacks a standardized, user-friendly software tool 
-analogous to **OpenSpiel** [@lanctot:2019] for general games or **CVXPY** [@diamond:2016] for convex optimization.
+Large population games are ubiquitous in real-world problems. As the number of players in the game grows, however, the 
+computational complexity grows exponentially, and it becomes notoriously hard to solve such problems.
+
+Various libraries have been developed for $N$-player games, such as **QuantEcon** [@batista:2024], **Nashpy**
+[@knight:2018] and **ilqgames** [@fridovich:2020]. In contrast, only very few tools focus on MFGs 
+and are mainly for experimental and internal use and hence not suitable for general users with their own customized 
+environments and problems.
 
 Existing tools fall short for one of two reasons:
 
-1. General game libraries such as **Nashpy** [@knight:2018] and **QuantEcon** [@batista:2024] do not provide adequate 
-support for mean-field interaction structures, population distributions, or MFG-specific solution methods.
+1. Current $N$-player frameworks such as Nashpy [@knight:2018] and QuantEcon [@batista:2024] are restricted to small $N$ 
+and lack the mean-field approximations necessary to handle the complexity of large-scale games.
 
 2. MFG-specific repositories such as **gmfg-learning** [@cui:2022] or **entropic-mfg** [@benamou:2019] are designed to 
-reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions, 
-and stable APIs.
+reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions,
+and well-documented algorithm implementations.
 
 Among the very few existing MFG libraries, **OpenSpiel** is the closest to **MFGLib**. **OpenSpiel** includes an MFG module, 
 but it lacks customizability and a user-friendly API for general users. According to its documentation, the MFG code 
@@ -142,17 +144,62 @@ for all $s, s' \in \mathcal{S}$ and $a \in \mathcal{A}$,
 $$\Pr(s_{t + 1} = s' \mid s_t = s, a_t = a) = \mathbf{1}_{\{ s' \}}(a)$$
 
 We tune two algorithms -- **OnlineMirrorDescent** [@perolat:2021] and **OccupationMeasureInclusion** [@hu:2024] -- on 
-this environment. As the plot below illustrates, tuning significantly improves performance by achieving faster 
+this environment. 
+
+```python
+from mfglib.env import Environment
+from mfglib.alg import OnlineMirrorDescent, OccupationMeasureInclusion
+from mfglib.tuning import GeometricMean
+
+MAX_ITER, ATOL, RTOL, N_TRIALS = 300, None, None, 50
+
+env = Environment.rock_paper_scissors(T=20)
+
+omd_orig = OnlineMirrorDescent()
+omi_orig = OccupationMeasureInclusion()
+
+# Compute exploitability traces for untuned algorithms
+_, omd_expls_orig, _ = omd_orig.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+_, omi_expls_orig, _ = omi_orig.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+
+metric = GeometricMean(shift=0.1)
+solve_kwargs = {"atol": ATOL, "rtol": RTOL, "max_iter": MAX_ITER}
+
+# Optimize algorithms over hyperparameters
+omd_study = omd_orig.tune(
+    metric=metric, envs=[env], n_trials=N_TRIALS, solve_kwargs=solve_kwargs
+)
+omi_study = omi_orig.tune(
+    metric=metric, envs=[env], n_trials=N_TRIALS, solve_kwargs=solve_kwargs
+)
+
+# Initialize new algorithms objects from the tuning results
+omd_tuned = omd_orig.from_study(omd_study)
+omi_tuned = omi_orig.from_study(omi_study)
+
+# Compute exploitability traces for tuned algorithms
+_, omd_expls_tuned, _ = omd_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+_, omi_expls_tuned, _ = omi_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+```
+
+As the plot below illustrates, tuning significantly improves performance by achieving faster 
 exploitability reduction.
 
 ![Exploitability curves before and after hyperparameter tuning](visualization.png)
 
+The library has developed an active user community, including researchers and practitioners who have already used 
+MFGLib in their work, contributed issues and pull requests on GitHub, and engaged with the tutorials and documentation. 
+This activity demonstrates that the package is both useful to the community and actively maintained. Since its release, 
+MFGLib has supported the development of several cutting-edge algorithms for MFGs, such as MF-OMO [@guo:2023], 
+MF-OMI [@hu:2024], and MESOB [@guo:2023:mesob], as well as new models including MFG-MCDM [@becherer:2025] 
+and ($\alpha$, $\beta$)-symmetric games [@yardim:2024]. It has also been used internally by Amazon Advertising for both research 
+and production purposes. We believe it will continue to serve as an important building block for researchers in both 
+academia and industry.
+
 # Acknowledgments
 
-An early pre-release version of MFGLib was used internally at Amazon Advertising and influenced several design choices.
-We thank the Amazon research teams for feedback and stress-testing the library in production settings. 
-
-The authors would especially like to thank Sareh Nabi, Rabih Salhab, and Lihong Li of Amazon, Xiaoyang Liu of Columbia 
-University, and Zhaoran Wang of Northwestern University for their valuable comments.
+We thank the Amazon research teams for feedback and stress-testing the library in production settings. The authors would 
+especially like to thank Sareh Nabi, Rabih Salhab, and Lihong Li of Amazon, Xiaoyang Liu of Columbia University, and 
+Zhaoran Wang of Northwestern University for their valuable comments.
 
 # References
