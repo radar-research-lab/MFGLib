@@ -141,7 +141,7 @@ from mfglib.env import Environment
 from mfglib.alg import OnlineMirrorDescent, OccupationMeasureInclusion
 from mfglib.tuning import GeometricMean
 
-MAX_ITER, ATOL, RTOL, N_TRIALS = 300, None, None, 50
+solve_kwargs = {"atol": None, "rtol": None, "max_iter": 300}
 
 env = Environment.rock_paper_scissors(T=20)
 
@@ -149,13 +149,13 @@ omd_orig = OnlineMirrorDescent()
 omi_orig = OccupationMeasureInclusion()
 
 # Compute exploitability traces for untuned algorithms
-_, omd_expls_orig, _ = omd_orig.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
-_, omi_expls_orig, _ = omi_orig.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+_, omd_expls_orig, _ = omd_orig.solve(env, **solve_kwargs)
+_, omi_expls_orig, _ = omi_orig.solve(env, **solve_kwargs)
 
 metric = GeometricMean(shift=0.1)
-solve_kwargs = {"atol": ATOL, "rtol": RTOL, "max_iter": MAX_ITER}
 
 # Optimize algorithms over hyperparameters
+N_TRIALS = 50
 omd_study = omd_orig.tune(
     metric=metric, envs=[env], n_trials=N_TRIALS, solve_kwargs=solve_kwargs
 )
@@ -168,8 +168,8 @@ omd_tuned = omd_orig.from_study(omd_study)
 omi_tuned = omi_orig.from_study(omi_study)
 
 # Compute exploitability traces for tuned algorithms
-_, omd_expls_tuned, _ = omd_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
-_, omi_expls_tuned, _ = omi_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
+_, omd_expls_tuned, _ = omd_tuned.solve(env, **solve_kwargs)
+_, omi_expls_tuned, _ = omi_tuned.solve(env, **solve_kwargs)
 ```
 
 Plotting the exploitability scores of the two algorithms, before and after tuning, we observe that tuning significantly 
