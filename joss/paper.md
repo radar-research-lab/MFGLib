@@ -20,8 +20,6 @@ authors:
 affiliations:
     - name: University of California, Berkeley
       index: 1
-    - name: Amazon.com (Amazon Scholar)
-      index: 2
     - name: Columbia University
       index: 3
     - name: Citadel Securities
@@ -48,7 +46,7 @@ open-source software package for defining and solving their own MFG problems.
 
 * A modular and extensible API for defining arbitrary discrete-time finite-state MFGs
 * Implementations of state-of-the-art algorithms for computing (approximate) Nash equilibria
-* A collection of pre-built benchmark environments drawn from the literature
+* A collection of ten customizable benchmark environments drawn from the literature
 * Tight integration with **Optuna** [@akiba:2019] to provide automatic hyperparameter selection
 * Clear documentation and examples, facilitating both research and industry use
 
@@ -67,8 +65,8 @@ environments and problems.
 
 Existing tools fall short for one of two reasons:
 
-1. Current $N$-player frameworks such as Nashpy [@knight:2018] and QuantEcon [@batista:2024] are restricted to small $N$ 
-and lack the mean-field approximations necessary to handle the complexity of large-scale games.
+1. Current $N$-player frameworks such as **Nashpy** [@knight:2018] and **QuantEcon** [@batista:2024] are restricted to 
+small $N$ and lack the mean-field approximations necessary to handle the complexity of large-scale games.
 
 2. MFG-specific repositories such as **gmfg-learning** [@cui:2022] or **entropic-mfg** [@benamou:2019] are designed to 
 reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions,
@@ -92,9 +90,7 @@ a way to prototype MFG-based models without requiring deep expertise in game the
 Users can define custom MFG environments by providing reward functions, transition functions, and basic 
 problem parameters (time horizon, state/action space sizes, initial distribution). The reward and transition 
 functions are simple callables that map time and population distribution to tensors, allowing users to create 
-environments with minimal code while maintaining mathematical clarity. The library also includes ten pre-loaded 
-benchmark environments from the literature [@cui:2021; @perrin:2020; @perolat:2021; @guo:2019; @guo:2023] 
-that can be instantiated directly with customizable parameters.
+environments with minimal code while maintaining mathematical clarity.
 
 ## Pre-Implemented Algorithms
 
@@ -118,12 +114,6 @@ minimal effort.
 structure of state and action spaces. Rather than flattening high-dimensional spaces into one-dimensional 
 representations, the library maintains their natural structure, providing higher interpretability and more 
 flexible user interactions.
-
-## Code Quality and Accessibility
-
-**MFGLib** adheres to high standards through continuous integration with comprehensive unit testing, code formatting 
-with `black` and `ruff`, and strict type-checking with `mypy`. The pure Python implementation requires no 
-complicated build process, and allows runtime introspection.
 
 # Example
 
