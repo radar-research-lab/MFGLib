@@ -65,14 +65,14 @@ environments and problems.
 
 Existing tools fall short for one of two reasons:
 
-1. Current $N$-player frameworks such as **Nashpy** [@knight:2018] and **QuantEcon** [@batista:2024] are restricted to 
+1. Current $N$-player frameworks such as Nashpy [@knight:2018] and QuantEcon [@batista:2024] are restricted to 
 small $N$ and lack the mean-field approximations necessary to handle the complexity of large-scale games.
 
 2. MFG-specific repositories such as **gmfg-learning** [@cui:2022] or **entropic-mfg** [@benamou:2019] are designed to 
 reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions,
 and well-documented algorithm implementations.
 
-Among the very few existing MFG libraries, **OpenSpiel** is the closest to **MFGLib**. **OpenSpiel** includes an MFG module, 
+Among the very few existing MFG libraries, **OpenSpiel** is the closest to MFGLib. OpenSpiel includes an MFG module, 
 but it lacks customizability and a user-friendly API for general users. According to its documentation, the MFG code 
 is experimental and recommended only for internal use.
 
@@ -94,7 +94,7 @@ environments with minimal code while maintaining mathematical clarity.
 
 ## Pre-Implemented Algorithms
 
-**MFGLib** implements several widely used algorithms, including **Online Mirror Descent** [@perolat:2021], 
+MFGLib implements several widely used algorithms, including **Online Mirror Descent** [@perolat:2021], 
 **Fictitious Play** [@perrin:2020], **MFOMO** [@guo:2023], **MFOMI** [@hu:2024], and **Prior Descent** [@cui:2021]. 
 These algorithms encompass many other existing methods as special cases, such as fixed point iteration and **GMF-V** 
 [@guo:2019]. The unified solver interface returns policy iterates, exploitability scores (which evaluate 
@@ -102,15 +102,15 @@ closeness to Nash equilibrium), and cumulative runtimes, with optional real-time
 
 ## Automatic Hyperparameter Tuning
 
-Every algorithm requires hyperparameters that can drastically influence convergence properties. **MFGLib** provides 
-a built-in tuner based on **Optuna** [@akiba:2019] to automatically select optimal hyperparameters. The tuner can 
+Every algorithm requires hyperparameters that can drastically influence convergence properties. MFGLib provides 
+a built-in tuner based on Optuna [@akiba:2019] to automatically select optimal hyperparameters. The tuner can 
 optimize across single instances or environment suites with multiple policy initializations and customizable 
 metrics (e.g., shifted geometric mean of exploitability). Users can also implement their own metrics with 
 minimal effort.
 
 ## High-Dimensional Representation
 
-**MFGLib** uses PyTorch tensors to represent policies, mean-fields, and rewards while preserving the original 
+MFGLib uses **PyTorch** tensors to represent policies, mean-fields, and rewards while preserving the original 
 structure of state and action spaces. Rather than flattening high-dimensional spaces into one-dimensional 
 representations, the library maintains their natural structure, providing higher interpretability and more 
 flexible user interactions.
@@ -123,7 +123,7 @@ proportional to twice the number of beaten agents minus the number of agents tha
 
 Formally, the state and action spaces are $\mathcal{S} = \{ 0, R, P, S \}$ and $\mathcal{A} = \mathcal{S} \setminus \{ 0 \}$,
 respectively. The initial state distribution is fixed at $\mu_0(0) = 1$, and the game occurs over timesteps 
-$\mathcal{T} = \{ 0, 1, \dots, 10 \}$. Agent rewards are specified by
+$\mathcal{T} = \{ 0, 1, \dots, T \}$. Agent rewards are specified by
 \begin{align*}
 r(R, a, \mu_t) &= 2 \cdot \mu_t(S) - 1 \cdot \mu_t(P) \\
 r(P, a, \mu_t) &= 4 \cdot \mu_t(R) - 2 \cdot \mu_t(S) \\
@@ -133,7 +133,7 @@ The transition function allows agents to pick their next state directly and inde
 for all $s, s' \in \mathcal{S}$ and $a \in \mathcal{A}$,
 $$\Pr(s_{t + 1} = s' \mid s_t = s, a_t = a) = \mathbf{1}_{\{ s' \}}(a)$$
 
-We tune two algorithms -- **OnlineMirrorDescent** [@perolat:2021] and **OccupationMeasureInclusion** [@hu:2024] -- on 
+We tune two algorithms -- Online Mirror Descent [@perolat:2021] and Occupation Measure Inclusion [@hu:2024] -- on 
 this environment. 
 
 ```python
@@ -172,10 +172,12 @@ _, omd_expls_tuned, _ = omd_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=
 _, omi_expls_tuned, _ = omi_tuned.solve(env, max_iter=MAX_ITER, atol=ATOL, rtol=RTOL)
 ```
 
-As the plot below illustrates, tuning significantly improves performance by achieving faster 
-exploitability reduction.
+Plotting the exploitability scores of the two algorithms, before and after tuning, we observe that tuning significantly 
+improves performance by achieving faster exploitability reduction.
 
 ![Exploitability curves before and after hyperparameter tuning](visualization.png)
+
+# Impact and Community Engagement
 
 The library has developed an active user community, including researchers and practitioners who have already used 
 MFGLib in their work, contributed issues and pull requests on GitHub, and engaged with the tutorials and documentation. 
