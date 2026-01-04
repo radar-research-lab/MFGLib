@@ -8,7 +8,7 @@ tags:
     - Multi-Agent Systems
 authors:
     - name: Xin Guo
-      affiliation: "1, 2"
+      affiliation: 1
     - name: Anran Hu
       affiliation: 3
     - name: Matteo Santamaria
