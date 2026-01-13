@@ -30,60 +30,75 @@ bibliography: paper.bib
 
 # Summary
 
-Mean-field games (MFGs) provide scalable models for large-population strategic interactions. 
-They approximate an $N$-player game by analyzing the limiting regime as $N \to \infty$, 
-replacing explicit multi-agent interactions with the interaction between a representative agent 
-and the population distribution [@lasry:2007]. It has been shown that the Nash equilibrium policy
-of the mean-field game is an $\epsilon$-Nash equilibrium of the $N$-player game with $\epsilon = O(1 / \sqrt{N})$ 
-[@huang:2006] and in practice even games with small $N$ on the order of tens can be well-approximated by MFGs 
-[@guo:2019; @kizilkale:2019; @cabannes:2021]. Due to their tractability, MFG models have become widely used in 
-applications such as digital advertising, high-frequency trading, dynamic pricing, transportation, and behavioral modeling.
+Mean-field games (MFGs) provide scalable models for large-population strategic interactions. They approximate an 
+$N$-player game by analyzing the limiting regime as $N \to \infty$, replacing explicit multi-agent interactions with 
+the interaction between a representative agent and the population distribution [@lasry:2007]. It has been shown that 
+the Nash equilibrium policy of the mean-field game is an $\epsilon$-Nash equilibrium of the $N$-player game with 
+$\epsilon = O(1 / \sqrt{N})$ [@huang:2006] and in practice even games with small $N$ on the order of tens can be 
+well-approximated by MFGs [@guo:2019; @kizilkale:2019; @cabannes:2021]. Due to their tractability, MFG models have 
+become widely used in applications such as digital advertising, high-frequency trading, dynamic pricing, transportation, 
+and behavioral modeling.
 
 Despite the rapid growth of the MFG literature, however, researchers and practitioners lack a unified, 
 open-source software package for defining and solving their own MFG problems. 
 
-**MFGLib** is an open-source Python library that addresses this gap by providing:
+MFGLib is an open-source Python library that addresses this gap by providing:
 
 * A modular and extensible API for defining arbitrary discrete-time finite-state MFGs
 * Implementations of state-of-the-art algorithms for computing (approximate) Nash equilibria
 * A collection of ten customizable benchmark environments drawn from the literature
-* Tight integration with **Optuna** [@akiba:2019] to provide automatic hyperparameter selection
+* Tight integration with Optuna [@akiba:2019] to provide automatic hyperparameter selection
 * Clear documentation and examples, facilitating both research and industry use
 
 The library is implemented in Python, maintained on GitHub, and can be installed via `pip install mfglib`. Full 
 documentation, tutorials, and example notebooks are available at https://mfglib.readthedocs.io/en/latest/.
 
-# Statement of need
+# Statement of Need
 
-Large population games are ubiquitous in real-world problems. As the number of players in the game grows, however, the 
-computational complexity grows exponentially, and it becomes notoriously hard to solve such problems.
+Large-population games, where a massive number of agents interact, are ubiquitous in fields such as economic modeling, 
+crowd dynamics, and smart-grid management. However, as the number of agents $N$ increases, traditional game-theoretic 
+methods face exponential computational growth. MFGs provide a tractable approximation by modeling the collective 
+behavior of agents in the infinite-population limit ($N \to \infty$). Despite the mathematical maturity of MFG theory, 
+the research ecosystem lacks a standardized software framework. This has led to a fragmented landscape where researchers 
+must frequently re-implement population dynamics and equilibrium solvers from scratch for every publication, a process 
+that is time-intensive and prone to implementation errors.
 
-Various libraries have been developed for $N$-player games, such as **QuantEcon** [@batista:2024], **Nashpy**
-[@knight:2018] and **ilqgames** [@fridovich:2020]. In contrast, only very few tools focus on MFGs 
-and are mainly for experimental and internal use and hence not suitable for general users with their own customized 
-environments and problems.
+MFGLib is designed to provide a unified, modular foundation for MFG research. By offering a standardized API that 
+decouples the environment definition from the equilibrium solver, the library lowers the barrier to entry for new 
+researchers, enables rapid experimentation, and offers practitioners a way to prototype MFG-based models without 
+requiring deep expertise in game theory or optimal control.
 
-Existing tools fall short for one of two reasons:
+The primary target audience for MFGLib includes computational economists, control engineers, and machine learning 
+researchers. It serves both the theorist looking to validate new solvers and the practitioner who requires a high-level 
+framework to solve large-scale systems quickly and reliably.
 
-1. Current $N$-player frameworks such as Nashpy [@knight:2018] and QuantEcon [@batista:2024] are restricted to 
-small $N$ and lack the mean-field approximations necessary to handle the complexity of large-scale games.
+# State of the Field
 
-2. MFG-specific repositories such as **gmfg-learning** [@cui:2022] or **entropic-mfg** [@benamou:2019] are designed to 
-reproduce experiments from individual publications. They lack reusable abstractions, extensible environment definitions,
-and well-documented algorithm implementations.
+The current landscape of game-theoretic software is bifurcated between general-purpose $N$-player frameworks and 
+specialized research scripts. $N$-player libraries like QuantEcon [@batista:2024], Nashpy [@knight:2018], and ilqgames 
+[@fridovich:2020] are restricted to small $N$ and lack the mean-field approximations necessary to handle the complexity 
+of large-scale games. Conversely, MFG-specific repositories such as gmfg-learning [@cui:2022] and entropic-mfg 
+[@benamou:2019] are typically "static" artifacts designed for single papers; they lack the unit testing, extensible 
+interfaces, and documentation required for broader community adoption.
 
-Among the very few existing MFG libraries, **OpenSpiel** is the closest to MFGLib. OpenSpiel includes an MFG module, 
-but it lacks customizability and a user-friendly API for general users. According to its documentation, the MFG code 
-is experimental and recommended only for internal use.
+## Build vs. Contribute Justification
 
-As a result, researchers re-implement environments, MFG solvers, and population dynamics from scratch -- an
-error-prone and time-consuming process that hinders reproducibility and comparison of new algorithms.
+While OpenSpiel [@lanctot:2019] contains an experimental module for MFGs, we chose to develop MFGLib as a standalone 
+library to address specific architectural and accessibility requirements that fall outside OpenSpiel’s primary design 
+goals:
 
-**MFGLib addresses this need as the first general-purpose, customizable, and well-documented MFG library.**
-It lowers the barrier to entry for new researchers, enables rapid experimentation, and offers practitioners
-a way to prototype MFG-based models without requiring deep expertise in game theory or optimal control.
+1. **Architectural Specialization:** OpenSpiel is a monolithic framework where MFGs represent only a small, experimental 
+subset of a codebase focused on general game theory. In contrast, MFGLib is a dedicated library built solely for MFGs. 
+This specialization ensures that the entire architecture is optimized for mean-field problems, providing a focused 
+environment without the overhead of a general-purpose game engine.
+2. **Mathematical Abstraction:** While OpenSpiel utilizes an agent-centric, trajectory-based simulation paradigm, 
+MFGLib mirrors the mathematical formalism of MFG theory. Its API treats mean-field operators, population distributions, 
+and rewards as first-class objects.
+3. **Technical Accessibility:** MFGLib is a pure-Python implementation designed for seamless integration with the 
+scientific stack (e.g., NumPy, SciPy). This avoids the steep barrier to entry associated with OpenSpiel’s monolithic 
+C++ codebase.
 
-# Key Features
+# Software Design
 
 ## User-Friendly Environment Creation
 
@@ -110,10 +125,9 @@ minimal effort.
 
 ## High-Dimensional Representation
 
-MFGLib uses **PyTorch** tensors to represent policies, mean-fields, and rewards while preserving the original 
-structure of state and action spaces. Rather than flattening high-dimensional spaces into one-dimensional 
-representations, the library maintains their natural structure, providing higher interpretability and more 
-flexible user interactions.
+MFGLib uses PyTorch tensors to represent policies, mean-fields, and rewards while preserving the original structure of 
+state and action spaces. Rather than flattening high-dimensional spaces into one-dimensional representations, the 
+library maintains their natural structure, providing higher interpretability and more flexible user interactions.
 
 # Example
 
@@ -177,21 +191,27 @@ improves performance by achieving faster exploitability reduction.
 
 ![Exploitability curves before and after hyperparameter tuning](visualization.png)
 
-# Impact and Community Engagement
+# Research Impact Statement
 
 The library has developed an active user community, including researchers and practitioners who have already used 
 MFGLib in their work, contributed issues and pull requests on GitHub, and engaged with the tutorials and documentation. 
 This activity demonstrates that the package is both useful to the community and actively maintained. Since its release, 
 MFGLib has supported the development of several cutting-edge algorithms for MFGs, such as MF-OMO [@guo:2023], 
 MF-OMI [@hu:2024], and MESOB [@guo:2023:mesob], as well as new models including MFG-MCDM [@becherer:2025] 
-and ($\alpha$, $\beta$)-symmetric games [@yardim:2024]. It has also been used internally by Amazon Advertising for both research 
-and production purposes. We believe it will continue to serve as an important building block for researchers in both 
-academia and industry.
+and ($\alpha$, $\beta$)-symmetric games [@yardim:2024]. It has also been used internally by Amazon Advertising for both 
+research and production purposes. We believe it will continue to serve as an important building block for researchers 
+in both academia and industry.
 
 # Acknowledgments
 
 We thank the Amazon research teams for feedback and stress-testing the library in production settings. The authors would 
 especially like to thank Sareh Nabi, Rabih Salhab, and Lihong Li of Amazon, Xiaoyang Liu of Columbia University, and 
 Zhaoran Wang of Northwestern University for their valuable comments.
+
+
+# AI Usage Disclosure
+
+The underlying library was developed without AI assistance; for the manuscript, Gemini 3 Flash was 
+utilized solely for final grammatical refinement and copy-editing of the original draft.
 
 # References
