@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import torch
 
 from mfglib.env import Environment
@@ -71,8 +69,6 @@ class RewardFn:
     def __call__(self, env: Environment, t: int, L_t: torch.Tensor) -> torch.Tensor:
         mu_t = L_t.flatten(start_dim=2).sum(dim=-1)
 
-        return cast(
-            torch.Tensor,
-            self.c * self.c1s[t]
-            - torch.log(mu_t.repeat(5, 1, 1).permute(1, 2, 0) + self.log_eps),
+        return self.c * self.c1s[t] - torch.log(
+            mu_t.repeat(5, 1, 1).permute(1, 2, 0) + self.log_eps
         )

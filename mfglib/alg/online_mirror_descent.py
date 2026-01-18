@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Self
 
 import optuna
 import torch

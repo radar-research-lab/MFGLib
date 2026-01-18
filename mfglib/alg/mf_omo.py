@@ -1,15 +1,9 @@
 from __future__ import annotations
 
 import json
-import sys
 import time
 from pathlib import Path
-from typing import Any, Literal
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
+from typing import Any, Literal, Self
 
 import optuna
 import torch

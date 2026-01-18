@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import torch
 
 from mfglib.env import Environment
@@ -50,4 +48,4 @@ class RewardFn:
         r_5 = -c4 * self.s_tensor
         r_t = r_1 + r_2 + r_3 + r_4 + r_5
 
-        return cast(torch.Tensor, r_t)
+        return r_t
