@@ -46,7 +46,7 @@ MFGLib is an open-source Python library that addresses this gap by providing:
 
 * A modular and extensible API for defining arbitrary discrete-time finite-state MFGs
 * Implementations of state-of-the-art algorithms for computing (approximate) Nash equilibria
-* A collection of ten customizable benchmark environments drawn from the literature
+* A collection of customizable benchmark environments drawn from the literature
 * Tight integration with Optuna [@akiba:2019] to provide automatic hyperparameter selection
 * Clear documentation and examples, facilitating both research and industry use
 
@@ -68,9 +68,8 @@ decouples the environment definition from the equilibrium solver, the library lo
 researchers, enables rapid experimentation, and offers practitioners a way to prototype MFG-based models without 
 requiring deep expertise in game theory or optimal control.
 
-The primary target audience for MFGLib includes computational economists, control engineers, and machine learning 
-researchers. It serves both the theorist looking to validate new solvers and the practitioner who requires a high-level 
-framework to solve large-scale systems quickly and reliably.
+MFGLib is for both researchers and practitioners from a broad range of backgrounds  working on large-population 
+strategic interactions who need a standardized, extensible toolkit to model, solve, and experiment with mean-field games.
 
 # State of the Field
 
@@ -79,24 +78,11 @@ specialized research scripts. $N$-player libraries like QuantEcon [@batista:2024
 [@fridovich:2020] are restricted to small $N$ and lack the mean-field approximations necessary to handle the complexity 
 of large-scale games. Conversely, MFG-specific repositories such as gmfg-learning [@cui:2022] and entropic-mfg 
 [@benamou:2019] are typically "static" artifacts designed for single papers; they lack the unit testing, extensible 
-interfaces, and documentation required for broader community adoption.
-
-## Build vs. Contribute Justification
-
-While OpenSpiel [@lanctot:2019] contains an experimental module for MFGs, we chose to develop MFGLib as a standalone 
-library to address specific architectural and accessibility requirements that fall outside OpenSpiel’s primary design 
-goals:
-
-1. **Architectural Specialization:** OpenSpiel is a monolithic framework where MFGs represent only a small, experimental 
-subset of a codebase focused on general game theory. In contrast, MFGLib is a dedicated library built solely for MFGs. 
-This specialization ensures that the entire architecture is optimized for mean-field problems, providing a focused 
-environment without the overhead of a general-purpose game engine.
-2. **Mathematical Abstraction:** While OpenSpiel utilizes an agent-centric, trajectory-based simulation paradigm, 
-MFGLib mirrors the mathematical formalism of MFG theory. Its API treats mean-field operators, population distributions, 
-and rewards as first-class objects.
-3. **Technical Accessibility:** MFGLib is a pure-Python implementation designed for seamless integration with the 
-scientific stack (e.g., NumPy, SciPy). This avoids the steep barrier to entry associated with OpenSpiel’s monolithic 
-C++ codebase.
+interfaces, and documentation required for broader community adoption. Among the very few existing MFG libraries, 
+OpenSpiel [@lanctot:2019], a collection of environments and algorithms for research in reinforcement learning and 
+planning in games, is the closest one to MFGLib. OpenSpiel has dedicated a module to MFGs implementing several 
+environments and algorithms. However, it lacks customizability and a user-friendly API. In fact, according to its 
+documentation, their code is still experimental and is only recommended for internal use.
 
 # Software Design
 
