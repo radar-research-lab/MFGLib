@@ -197,7 +197,7 @@ Zhaoran Wang of Northwestern University for their valuable comments.
 
 # AI Usage Disclosure
 
-The underlying library was developed without AI assistance; for the manuscript, Gemini 3 Flash was 
-utilized solely for final grammatical refinement and copy-editing of the original draft.
+The MFGLib library was developed without AI assistance; for the manuscript, Gemini 3 Flash was utilized for grammatical 
+refinement and copy-editing. All AI-generated content was reviewed and edited for accuracy by the authors.
 
 # References
