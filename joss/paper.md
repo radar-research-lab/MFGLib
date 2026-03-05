@@ -170,6 +170,26 @@ omi_tuned = omi_orig.from_study(omi_study)
 # Compute exploitability traces for tuned algorithms
 _, omd_expls_tuned, _ = omd_tuned.solve(env, **solve_kwargs)
 _, omi_expls_tuned, _ = omi_tuned.solve(env, **solve_kwargs)
+
+# Produce the plot
+import polars as pl
+import altair as alt
+
+configs = [
+    (omd_expls_orig,  "OnlineMirrorDescent",        False),
+    (omi_expls_orig,  "OccupationMeasureInclusion", False),
+    (omd_expls_tuned, "OnlineMirrorDescent",        True),
+    (omi_expls_tuned, "OccupationMeasureInclusion", True),
+]
+df = pl.concat([
+    pl.DataFrame({"EXPL": expl})
+        .with_columns(ALG=pl.lit(alg), TUNED=tuned)
+        .with_row_index("ITER")
+    for expl, alg, tuned in configs
+])
+df.plot.line(
+    x="ITER", y=alt.Y("EXPL").scale(type="log"), color="TUNED", column="ALG"
+)
 ```
 
 Plotting the exploitability scores of the two algorithms, before and after tuning, we observe that tuning significantly 
