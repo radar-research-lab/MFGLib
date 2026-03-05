@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Callable, TypedDict
 
 import torch.nn
 
 from mfglib.env import Environment
 from mfglib.scoring import exploitability_score as expl_score
-from mfglib.utils import policy_from_mean_field, mean_field_from_policy
+from mfglib.utils import mean_field_from_policy, policy_from_mean_field
 
 
 class MESOB:
@@ -68,7 +69,11 @@ class MESOB:
             n_actions = self.env.n_actions
 
             err = torch.empty(T + 1, n_states, n_actions, dtype=torch.double)
-            Z = torch.eye(n_states, dtype=torch.double).unsqueeze(dim=1).repeat(1, n_actions, 1)
+            Z = (
+                torch.eye(n_states, dtype=torch.double)
+                .unsqueeze(dim=1)
+                .repeat(1, n_actions, 1)
+            )
             d_0 = d[0].reshape(*self.env.S, *self.env.A)
             c_0 = -self.env.reward(0, d_0).reshape(n_states, n_actions)
             P_0 = self.env.prob(0, d_0).reshape(n_states, n_states, n_actions)
@@ -100,6 +105,7 @@ class MESOB:
         social_reward: Callable[[torch.Tensor], float] | None = None,
         max_iter: int = 100,
         kwargs: MESOB.Kwargs | None = None,
+        atol: float | None = None,
     ) -> dict[str, torch.Tensor]:
         """TODO -- what is the best way to specify social metrics and weights?"""
         if social_reward is None:
@@ -111,9 +117,9 @@ class MESOB:
         n_actions = env.n_actions
         r_max = env.r_max
 
-        default_d0 = torch.ones(T + 1, n_states, n_actions, dtype=torch.double) / n_states / n_actions
-        default_y0 = torch.zeros(T + 1, n_states, dtype=torch.double)
-        default_z0 = torch.zeros(T + 1, n_states, n_actions, dtype=torch.double)
+        default_d0 = torch.ones(T + 1, n_states, n_actions) / n_states / n_actions
+        default_y0 = torch.zeros(T + 1, n_states)
+        default_z0 = torch.zeros(T + 1, n_states, n_actions)
 
         d = kwargs.pop("d0", default_d0).to(dtype=torch.double)
         y = kwargs.pop("y0", default_y0).to(dtype=torch.double)
@@ -135,7 +141,14 @@ class MESOB:
         expl = torch.empty(max_iter, dtype=torch.double)
         welf = torch.empty(max_iter, dtype=torch.double)
         grad_norm = torch.empty(max_iter, dtype=torch.double)
+        solve_time = torch.empty(max_iter, dtype=torch.double)
 
+        min_grad_norm = float("inf")
+        d_best = d.detach().clone()
+        y_best = y.detach().clone()
+        z_best = z.detach().clone()
+
+        t0 = time.perf_counter()
         for i in range(max_iter):
             with torch.no_grad():
                 d_prev = d.clone()
@@ -155,33 +168,46 @@ class MESOB:
                 y_next = project_l2_ball(y, radius=y_radius)
                 z_next = project_Z_set(z, radius=z_radius)
 
-                _assert_dyz_is_feasible(
-                    d=d_next, y=y_next, z=z_next, y_radius=y_radius, z_radius=z_radius
-                )
+                # _assert_dyz_is_feasible(
+                #     d=d_next, y=y_next, z=z_next, y_radius=y_radius, z_radius=z_radius
+                # )
 
-                Δd_norm = torch.norm(d_next - d_prev)
-                Δy_norm = torch.norm(y_next - y_prev)
-                Δz_norm = torch.norm(z_next - z_prev)
+                Δd_norm = torch.linalg.vector_norm(d_next - d_prev)
+                Δy_norm = torch.linalg.vector_norm(y_next - y_prev)
+                Δz_norm = torch.linalg.vector_norm(z_next - z_prev)
 
                 d_shaped = d_next.reshape(T + 1, *env.S, *env.A)
                 pi = policy_from_mean_field(d_shaped, env=env)
                 d_pi = mean_field_from_policy(pi, env=env)
 
-                grad_norm[i] = (Δd_norm + Δy_norm + Δz_norm) / opt_kwargs["lr"]
+                grad_norm[i] = (
+                    torch.sqrt(Δd_norm**2 + Δy_norm**2 + Δz_norm**2) / opt_kwargs["lr"]
+                )
                 expl[i] = expl_score(env, pi)
                 welf[i] = social_reward(d_pi)
+                solve_time[i] = time.perf_counter() - t0
 
                 d.copy_(d_next)
                 y.copy_(y_next)
                 z.copy_(z_next)
 
+                if grad_norm[i] < min_grad_norm:
+                    min_grad_norm = grad_norm[i]
+                    d_best = d_next.detach().clone()
+                    y_best = y_next.detach().clone()
+                    z_best = z_next.detach().clone()
+
+                if atol is not None and grad_norm[i] < atol:
+                    break
+
         return dict(
-            d=d.detach(),
-            y=y.detach(),
-            z=z.detach(),
-            grad_norm=grad_norm,
-            expl=expl,
-            welf=welf,
+            d=d_best,
+            y=y_best,
+            z=z_best,
+            grad_norm=grad_norm[: i + 1],
+            expl=expl[: i + 1],
+            welf=welf[: i + 1],
+            solve_time=solve_time[: i + 1],
         )
 
 
@@ -233,7 +259,7 @@ def _assert_dyz_is_feasible(
     z: torch.Tensor,
     y_radius: float,
     z_radius: float,
-    eps: float = 1e-10
+    eps: float = 1e-10,
 ) -> None:
     assert torch.all(d >= -eps) and torch.all(d <= 1 + eps), f"{d.min()}, {d.max()}"
     dvec = d.flatten(start_dim=1).sum(dim=1)

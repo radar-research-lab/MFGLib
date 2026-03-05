@@ -14,12 +14,19 @@ authors = [
 ]
 urls = { documentation = "https://mfglib.readthedocs.io/en/latest/" }
 dependencies = [
-    "torch~=2.0",
-    "optuna~=3.0",
-    "osqp~=0.0",
-    "numpy~=2.0",
-    "scipy~=1.17 ",
-    "rich~=14.0",
+    "torch",
+    "optuna",
+    "osqp",
+    "numpy",
+    "scipy",
+    "rich",
+    # Temporary additions
+    "cvxpy",
+    "polars",
+    "altair",
+    "tqdm",
+    "vl-convert-python",
+    "tqdm"
 ]
 
 [tool.poetry.group.dev.dependencies]
