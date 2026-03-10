@@ -171,31 +171,33 @@ omi_tuned = omi_orig.from_study(omi_study)
 _, omd_expls_tuned, _ = omd_tuned.solve(env, **solve_kwargs)
 _, omi_expls_tuned, _ = omi_tuned.solve(env, **solve_kwargs)
 
-# Produce the plot
-import polars as pl
-import altair as alt
+# Produce the plot; matplotlib is only included as a dev dependency
+import matplotlib.pyplot as plt
 
-configs = [
-    (omd_expls_orig,  "OnlineMirrorDescent",        False),
-    (omi_expls_orig,  "OccupationMeasureInclusion", False),
-    (omd_expls_tuned, "OnlineMirrorDescent",        True),
-    (omi_expls_tuned, "OccupationMeasureInclusion", True),
-]
-df = pl.concat([
-    pl.DataFrame({"EXPL": expl})
-        .with_columns(ALG=pl.lit(alg), TUNED=tuned)
-        .with_row_index("ITER")
-    for expl, alg, tuned in configs
-])
-df.plot.line(
-    x="ITER", y=alt.Y("EXPL").scale(type="log"), color="TUNED", column="ALG"
-)
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5), sharey=True)
+
+axes[0].set_title("OnlineMirrorDescent")
+axes[0].plot(omd_expls_orig, label="Original")
+axes[0].plot(omd_expls_tuned, label="Tuned")
+
+axes[1].set_title("OccupationMeasureInclusion")
+axes[1].plot(omi_expls_orig, label="Original")
+axes[1].plot(omi_expls_tuned, label="Tuned")
+
+axes[0].set_ylabel("Exploitability")
+for ax in axes:
+    ax.set_yscale("log")
+    ax.set_xlabel("Iteration")
+    ax.grid(True, which="both", linestyle="--", alpha=0.6)
+    ax.legend()
+
+plt.tight_layout()
 ```
 
 Plotting the exploitability scores of the two algorithms, before and after tuning, we observe that tuning significantly 
 improves performance by achieving faster exploitability reduction.
 
-![Exploitability curves before and after hyperparameter tuning](visualization.png)
+![Exploitability curves before and after hyperparameter tuning](viz.png)
 
 # Research Impact Statement
 
