@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "A Library for Mean-Field Games."
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.11,<3.14"  # osqp doesn't provide wheels for >=3.14 yet
+requires-python = ">=3.11,<3.14"  # As of Mar 30, 2026 torch fails for Python 3.14
 authors = [
     { name = "Xin Guo", email = "xinguo@berkeley.edu" },
     { name = "Anran Hu", email = "anranhu0107@gmail.com" },
