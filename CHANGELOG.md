@@ -8,6 +8,12 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [v0.3.0](https://github.com/radar-research-lab/MFGLib/tree/v0.3.0) - 2026-03-30
+
+### Security
+
+- Bump minimum supported Python version to 3.11
+
 ## [v0.2.0](https://github.com/radar-research-lab/MFGLib/tree/v0.2.0) - 2025-08-26
 
 ### Added
