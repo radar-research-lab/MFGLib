@@ -9,14 +9,19 @@ tags:
 authors:
     - name: Xin Guo
       affiliation: 1
+      orcid: 0000-0002-3350-4606
     - name: Anran Hu
       affiliation: 3
+      orcid: 0000-0002-6781-0900
     - name: Matteo Santamaria
       affiliation: 1
+      orcid: 0009-0000-1406-2083
     - name: Mahan Tajrobehkar
       affiliation: 1
+      orcid: 0000-0002-0290-5255
     - name: Junzi Zhang
       affiliation: 4
+      orcid: 0000-0002-5086-0063
 affiliations:
     - name: University of California, Berkeley
       index: 1
