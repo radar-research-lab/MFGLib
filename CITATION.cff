@@ -1,0 +1,50 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Guo
+  given-names: Xin
+  orcid: "https://orcid.org/0000-0002-3350-4606"
+- family-names: Hu
+  given-names: Anran
+  orcid: "https://orcid.org/0000-0002-6781-0900"
+- family-names: Santamaria
+  given-names: Matteo
+  orcid: "https://orcid.org/0009-0000-1406-2083"
+- family-names: Tajrobehkar
+  given-names: Mahan
+  orcid: "https://orcid.org/0000-0002-0290-5255"
+- family-names: Zhang
+  given-names: Junzi
+  orcid: "https://orcid.org/0000-0002-5086-0063"
+doi: 10.5281/zenodo.19375906
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Guo
+    given-names: Xin
+    orcid: "https://orcid.org/0000-0002-3350-4606"
+  - family-names: Hu
+    given-names: Anran
+    orcid: "https://orcid.org/0000-0002-6781-0900"
+  - family-names: Santamaria
+    given-names: Matteo
+    orcid: "https://orcid.org/0009-0000-1406-2083"
+  - family-names: Tajrobehkar
+    given-names: Mahan
+    orcid: "https://orcid.org/0000-0002-0290-5255"
+  - family-names: Zhang
+    given-names: Junzi
+    orcid: "https://orcid.org/0000-0002-5086-0063"
+  date-published: 2026-04-13
+  doi: 10.21105/joss.10137
+  issn: 2475-9066
+  issue: 120
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 10137
+  title: "MFGLib: A Library for Mean-Field Games"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.10137"
+  volume: 11
+title: "MFGLib: A Library for Mean-Field Games"
