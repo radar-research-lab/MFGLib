@@ -27,7 +27,7 @@ affiliations:
       index: 1
     - name: Columbia University, USA
       index: 2
-    - name: Citadel Securities
+    - name: Citadel Securities, USA
       index: 3
 date: 1 December 2025
 bibliography: paper.bib
