@@ -11,7 +11,7 @@ authors:
       affiliation: 1
       orcid: 0000-0002-3350-4606
     - name: Anran Hu
-      affiliation: 3
+      affiliation: 2
       orcid: 0000-0002-6781-0900
     - name: Matteo Santamaria
       affiliation: 1
@@ -20,15 +20,15 @@ authors:
       affiliation: 1
       orcid: 0000-0002-0290-5255
     - name: Junzi Zhang
-      affiliation: 4
+      affiliation: 3
       orcid: 0000-0002-5086-0063
 affiliations:
-    - name: University of California, Berkeley
+    - name: University of California, Berkeley, USA
       index: 1
-    - name: Columbia University
-      index: 3
+    - name: Columbia University, USA
+      index: 2
     - name: Citadel Securities
-      index: 4
+      index: 3
 date: 1 December 2025
 bibliography: paper.bib
 ---
@@ -56,7 +56,7 @@ MFGLib is an open-source Python library that addresses this gap by providing:
 * Clear documentation and examples, facilitating both research and industry use
 
 The library is implemented in Python, maintained on GitHub, and can be installed via `pip install mfglib`. Full 
-documentation, tutorials, and example notebooks are available at https://mfglib.readthedocs.io/en/latest/.
+documentation, tutorials, and example notebooks are available at <https://mfglib.readthedocs.io/en/latest/>.
 
 # Statement of Need
 
@@ -85,15 +85,15 @@ of large-scale games. Conversely, MFG-specific repositories such as gmfg-learnin
 [@benamou:2019] are typically "static" artifacts designed for single papers; they lack the unit testing, extensible 
 interfaces, and documentation required for broader community adoption. Among the very few existing MFG libraries, 
 OpenSpiel [@lanctot:2019], a collection of environments and algorithms for research in reinforcement learning and 
-planning in games, is the closest one to MFGLib. OpenSpiel has dedicated a module to MFGs implementing several 
+planning in games, is the closest to MFGLib. OpenSpiel has dedicated a module to MFGs implementing several 
 environments and algorithms. However, it lacks customizability and a user-friendly API. In fact, according to its 
-documentation, their code is still experimental and is only recommended for internal use.
+documentation, the code is still experimental and is only recommended for internal use.
 
 # Software Design
 
 ## User-Friendly Environment Creation
 
-Users can define custom MFG environments by providing reward functions, transition functions, and basic 
+MFGLib users can define custom MFG environments by providing reward functions, transition functions, and basic 
 problem parameters (time horizon, state/action space sizes, initial distribution). The reward and transition 
 functions are simple callables that map time and population distribution to tensors, allowing users to create 
 environments with minimal code while maintaining mathematical clarity.
