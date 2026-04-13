@@ -55,14 +55,6 @@ plt.show()
 Please refer to the [documentation](https://mfglib.readthedocs.io/en/latest/) for more info on how to use the library. 
 
 ## Citing
-If you wish to cite MFGLib, please use the following:
-```
-@article{mfglib,
-    author  = {Guo, X. and Hu, A. and Santamaria, M. and Tajrobehkar, M. and Zhang, J.},
-    title   = {{MFGLib}: A Library for Mean Field Games},
-    journal = {arXiv preprint arXiv:2304.08630},
-    year    = {2023}
-}
-```
-If you find MFGLib to be helpful and would like to send virtual kudos, please consider leaving a star on the [GitHub repository](https://github.com/radar-research-lab/MFGLib).
+If you wish to cite MFGLib, please click "Cite this repository" in the `About` sidebar.  If you find MFGLib to be 
+helpful and would like to send virtual kudos, please consider leaving a star on the [GitHub repository](https://github.com/radar-research-lab/MFGLib).
 
